@@ -36,10 +36,48 @@ for (const [zone, lon] of [[5, 15], [6, 18], [7, 21], [8, 24]]) {
 proj4.defs('EPSG:2180', `+proj=tmerc +lat_0=0 +lon_0=19 +k=0.9993 +x_0=500000 +y_0=-5300000 ${GRS80}`)
 register(proj4)
 
-const ORTO_WMS = 'https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/StandardResolution'
+export const BASEMAPS = [
+  { id: 'orto', label: 'Ortofotomapa' },
+  { id: 'bdot10k', label: 'BDOT10k' },
+] as const
+export type BasemapId = (typeof BASEMAPS)[number]['id']
+
+const GEOPORTAL = 'https://mapy.geoportal.gov.pl/wss/service'
+const ORTO_WMS = `${GEOPORTAL}/PZGIK/ORTO/WMS/StandardResolution`
+const BDOT_WMS = `${GEOPORTAL}/pub/guest/kompozycja_BDOT10k_WMS/MapServer/WMSServer`
+
+// WMS 1.1.1: kolejność osi w BBOX zawsze wschód, północ.
+function wmsSource(url: string, params: Record<string, string>, attributions: string): ImageWMS {
+  return new ImageWMS({
+    url,
+    params: { VERSION: '1.1.1', ...params },
+    ratio: 1,
+    crossOrigin: 'anonymous',
+    attributions,
+  })
+}
+
+/**
+ * Usługa BDOT10k nie ma warstwy zbiorczej, więc listę warstw bierzemy z GetCapabilities.
+ * Capabilities wymienia warstwy od wierzchniej, a LAYERS rysuje od spodniej, stąd odwrócenie.
+ */
+async function bdotSource(): Promise<ImageWMS> {
+  const res = await fetch(`${BDOT_WMS}?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1`)
+  if (!res.ok) throw new Error(`GetCapabilities BDOT10k: HTTP ${res.status}`)
+  const doc = new DOMParser().parseFromString(await res.text(), 'text/xml')
+  const names = Array.from(doc.querySelectorAll('Layer > Name'), (n) => n.textContent ?? '')
+  if (names.length === 0) throw new Error('GetCapabilities BDOT10k: brak warstw')
+  return wmsSource(
+    BDOT_WMS,
+    { LAYERS: names.reverse().join(','), FORMAT: 'image/png', TRANSPARENT: 'FALSE', BGCOLOR: '0xFFFFFF' },
+    'BDOT10k © GUGiK (geoportal.gov.pl)',
+  )
+}
 
 export interface MapHandle {
   setCrs(code: string): void
+  /** Odrzuca obietnicę, gdy podkładu nie da się wczytać; poprzedni podkład zostaje. */
+  setBasemap(id: BasemapId): Promise<void>
   setSegment(a: GeoPoint | null, b: GeoPoint | null): void
   destroy(): void
 }
@@ -72,19 +110,18 @@ function pointStyle(label: string): Style {
 
 export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapHandle {
   const segment = new VectorSource()
+  const orto = wmsSource(
+    ORTO_WMS,
+    { LAYERS: 'Raster', FORMAT: 'image/jpeg' },
+    'Ortofotomapa © GUGiK (geoportal.gov.pl)',
+  )
+  const basemap = new ImageLayer({ source: orto })
+  let bdot: Promise<ImageWMS> | undefined
+  let wanted: BasemapId = 'orto'
   const map = new Map({
     target,
     layers: [
-      new ImageLayer({
-        source: new ImageWMS({
-          url: ORTO_WMS,
-          // WMS 1.1.1: kolejność osi w BBOX zawsze wschód, północ.
-          params: { LAYERS: 'Raster', VERSION: '1.1.1', FORMAT: 'image/jpeg' },
-          ratio: 1,
-          crossOrigin: 'anonymous',
-          attributions: 'Ortofotomapa © GUGiK (geoportal.gov.pl)',
-        }),
-      }),
+      basemap,
       new VectorLayer({
         source: segment,
         style: new Style({ stroke: new Stroke({ color: '#fbbf24', width: 3 }) }),
@@ -113,6 +150,21 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
           resolution: old.getResolution(),
         }),
       )
+    },
+    async setBasemap(id) {
+      wanted = id
+      if (id === 'orto') {
+        basemap.setSource(orto)
+        return
+      }
+      bdot ??= bdotSource()
+      try {
+        const source = await bdot
+        if (wanted === id) basemap.setSource(source)
+      } catch (e) {
+        bdot = undefined
+        throw e
+      }
     },
     setSegment(a, b) {
       segment.clear()

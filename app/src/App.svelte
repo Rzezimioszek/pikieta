@@ -1,12 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { CRS_LIST, createMap, type GeoPoint, type MapHandle } from './lib/map'
+  import { BASEMAPS, CRS_LIST, createMap, type BasemapId, type GeoPoint, type MapHandle } from './lib/map'
   import init, { azimuth_distance, core_version } from './lib/wasm/pikieta.js'
 
   let mapEl = $state<HTMLDivElement>()
   let handle = $state.raw<MapHandle>()
   let coreVersion = $state('')
   let crs = $state('EPSG:2178')
+  let basemap = $state<BasemapId>('orto')
+  let basemapError = $state('')
   let cursor = $state<GeoPoint | null>(null)
   let fields = $state({ xa: '', ya: '', xb: '', yb: '' })
   let nextClick = $state<'a' | 'b'>('a')
@@ -37,6 +39,14 @@
 
   $effect(() => handle?.setSegment(a, b))
   $effect(() => handle?.setCrs(crs))
+  $effect(() => {
+    const id = basemap
+    handle?.setBasemap(id).catch(() => {
+      if (basemap !== id) return
+      basemapError = `Nie udało się wczytać podkładu ${BASEMAPS.find((b) => b.id === id)?.label}.`
+      basemap = 'orto'
+    })
+  })
 
   onMount(() => {
     init().then(() => (coreVersion = core_version()))
@@ -74,6 +84,16 @@
         {/each}
       </select>
     </label>
+
+    <label class="row">
+      Podkład
+      <select bind:value={basemap} onchange={() => (basemapError = '')}>
+        {#each BASEMAPS as b (b.id)}
+          <option value={b.id}>{b.label}</option>
+        {/each}
+      </select>
+    </label>
+    {#if basemapError}<p class="hint" role="alert">{basemapError}</p>{/if}
 
     <h2>Azymut i długość</h2>
     <p class="hint">Wpisz współrzędne albo kliknij na mapie (następny punkt: {nextClick.toUpperCase()}).</p>
