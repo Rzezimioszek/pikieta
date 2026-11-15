@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { BASEMAPS, CRS_LIST, createMap, type BasemapId, type GeoPoint, type MapHandle } from './lib/map'
-  import init, { azimuth_distance, core_version } from './lib/wasm/pikieta.js'
+  import init, { azimuth_distance, core_version, to_geodetic, transform } from './lib/wasm/pikieta.js'
 
   let mapEl = $state<HTMLDivElement>()
   let handle = $state.raw<MapHandle>()
   let coreVersion = $state('')
   let crs = $state('EPSG:2178')
+  let shownCrs = 'EPSG:2178'
   let basemap = $state<BasemapId>('orto')
   let basemapError = $state('')
   let cursor = $state<GeoPoint | null>(null)
@@ -36,6 +37,28 @@
     r.free()
     return out
   })
+
+  const epsg = (code: string) => Number(code.replace('EPSG:', ''))
+
+  const cursorGeo = $derived.by(() => {
+    if (!coreVersion || !cursor) return null
+    const g = to_geodetic(epsg(crs), cursor.x, cursor.y)
+    return g ? { lat: g[0], lon: g[1] } : null
+  })
+
+  /** Po zmianie układu przelicza wpisane punkty, żeby zostały w tym samym miejscu w terenie. */
+  function onCrsChange() {
+    const [from, to] = [epsg(shownCrs), epsg(crs)]
+    shownCrs = crs
+    if (!coreVersion) return
+    for (const [kx, ky] of [['xa', 'ya'], ['xb', 'yb']] as const) {
+      const p = point(fields[kx], fields[ky])
+      const t = p && transform(from, to, p.x, p.y)
+      if (!t) continue
+      fields[kx] = t[0].toFixed(2)
+      fields[ky] = t[1].toFixed(2)
+    }
+  }
 
   $effect(() => handle?.setSegment(a, b))
   $effect(() => handle?.setCrs(crs))
@@ -78,7 +101,7 @@
 
     <label class="row">
       Układ
-      <select bind:value={crs}>
+      <select bind:value={crs} onchange={onCrsChange}>
         {#each CRS_LIST as c (c.code)}
           <option value={c.code}>{c.label}</option>
         {/each}
@@ -116,7 +139,10 @@
     </dl>
 
     <footer>
-      <span>{cursor ? `X ${cursor.x.toFixed(2)}  Y ${cursor.y.toFixed(2)}` : ''}</span>
+      <span>
+        {cursor ? `X ${cursor.x.toFixed(2)}  Y ${cursor.y.toFixed(2)}` : ''}
+        {#if cursorGeo}<br />B {cursorGeo.lat.toFixed(6)}°  L {cursorGeo.lon.toFixed(6)}°{/if}
+      </span>
       <span>{coreVersion ? `rdzeń ${coreVersion}` : 'ładowanie rdzenia…'}</span>
     </footer>
   </aside>

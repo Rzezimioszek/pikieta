@@ -1,0 +1,15 @@
+[package]
+name = "pikieta-cli"
+description = "Narzędzie wiersza poleceń Pikiety: transformacje układów i obliczenia geodezyjne."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "pikieta"
+path = "src/main.rs"
+
+[dependencies]
+pikieta-core.workspace = true
+pikieta-calc.workspace = true
+pikieta-crs.workspace = true

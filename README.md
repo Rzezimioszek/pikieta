@@ -2,7 +2,7 @@
 
 Otwarty kalkulator geodezyjny z mapą, pisany w Ruście. Działa w przeglądarce, na Windows, Linux i Androidzie z jednego kodu.
 
-Projekt jest na wczesnym etapie: działa mapa z ortofotomapą Geoportalu w układach PL-2000 i PL-1992 oraz jedno zadanie (azymut i długość). Dalsze kroki opisuje [PLAN.md](PLAN.md).
+Projekt jest na wczesnym etapie: działa mapa z ortofotomapą lub BDOT10k z Geoportalu, przeliczenia między PL-2000, PL-1992 i UTM oraz podstawowe zadania obliczeniowe w rdzeniu i wierszu poleceń. Dalsze kroki opisuje [PLAN.md](PLAN.md).
 
 ## Struktura
 
@@ -10,8 +10,9 @@ Projekt jest na wczesnym etapie: działa mapa z ortofotomapą Geoportalu w ukła
 |---|---|---|
 | `crates/pikieta-core` | typy podstawowe: punkty, kąty | MIT OR Apache-2.0 |
 | `crates/pikieta-calc` | obliczenia geodezyjne | MIT OR Apache-2.0 |
-| `crates/pikieta-crs` | układy współrzędnych (etap 1) | MIT OR Apache-2.0 |
+| `crates/pikieta-crs` | układy PL-2000, PL-1992, UTM (Gauss-Krüger) | MIT OR Apache-2.0 |
 | `crates/pikieta-gml` | odczyt i zapis GML (etap 3) | MIT OR Apache-2.0 |
+| `crates/pikieta-cli` | polecenie `pikieta` | MIT OR Apache-2.0 |
 | `crates/pikieta-wasm` | wiązania WebAssembly rdzenia | MIT OR Apache-2.0 |
 | `app` | interfejs (TypeScript, Svelte, OpenLayers) | GPL-3.0-or-later |
 | `app/src-tauri` | powłoka Tauri 2 (desktop, Android) | GPL-3.0-or-later |
@@ -29,6 +30,13 @@ npm run tauri dev    # okno desktopowe
 ```
 
 Testy rdzenia: `cargo test` w katalogu głównym.
+
+Wiersz poleceń:
+
+```bash
+cargo run -p pikieta-cli -- transformuj 2178 2180 5788456.49 7500833.51
+cargo run -p pikieta-cli -- pomoc
+```
 
 Android wymaga Android SDK i NDK oraz JDK 17: `npm run tauri android init`, potem `npm run tauri android dev`.
 

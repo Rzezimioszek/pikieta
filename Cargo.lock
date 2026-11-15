@@ -2350,6 +2350,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pikieta-cli"
+version = "0.1.0"
+dependencies = [
+ "pikieta-calc",
+ "pikieta-core",
+ "pikieta-crs",
+]
+
+[[package]]
 name = "pikieta-core"
 version = "0.1.0"
 
@@ -2373,6 +2382,7 @@ version = "0.1.0"
 dependencies = [
  "pikieta-calc",
  "pikieta-core",
+ "pikieta-crs",
  "wasm-bindgen",
 ]
 

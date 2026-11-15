@@ -1,6 +1,7 @@
 //! Wiązania WebAssembly: cienka warstwa nad crate'ami rdzenia.
 
 use pikieta_core::{rad_to_grad, Point2};
+use pikieta_crs::Crs;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -27,4 +28,22 @@ pub fn azimuth_distance(xa: f64, ya: f64, xb: f64, yb: f64) -> Option<AzimuthDis
 #[wasm_bindgen]
 pub fn core_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
+}
+
+/// Przelicza punkt między układami płaskimi podanymi kodami EPSG.
+/// Zwraca `[x, y]` albo `undefined` dla nieobsługiwanego układu.
+#[wasm_bindgen]
+pub fn transform(from_epsg: u32, to_epsg: u32, x: f64, y: f64) -> Option<Vec<f64>> {
+    let from = Crs::from_epsg(from_epsg)?;
+    let to = Crs::from_epsg(to_epsg)?;
+    let p = pikieta_crs::transform(Point2::new(x, y), from, to);
+    Some(vec![p.x, p.y])
+}
+
+/// Współrzędne płaskie na geodezyjne. Zwraca `[szerokość, długość]` w stopniach
+/// albo `undefined` dla nieobsługiwanego układu.
+#[wasm_bindgen]
+pub fn to_geodetic(epsg: u32, x: f64, y: f64) -> Option<Vec<f64>> {
+    let g = Crs::from_epsg(epsg)?.inverse(Point2::new(x, y));
+    Some(vec![g.lat, g.lon])
 }
