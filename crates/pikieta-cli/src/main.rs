@@ -12,6 +12,9 @@ Użycie:
   pikieta bl <EPSG> <X> <Y>                        płaskie na geodezyjne (stopnie)
   pikieta azymut <Xa> <Ya> <Xb> <Yb>               azymut (grady) i długość
   pikieta pole <X1> <Y1> <X2> <Y2> <X3> <Y3> ...   pole wieloboku ze współrzędnych
+  pikieta skala <EPSG> <X> <Y>                     skala odwzorowania i zbieżność południków (grady)
+  pikieta redukcja <EPSG> <Xa> <Ya> <Xb> <Yb>      długość z XY, skala odcinka, długość na elipsoidzie
+  pikieta pole-elipsoida <EPSG> <X1> <Y1> ...      pole wieloboku zredukowane na elipsoidę
 
 X to północ, Y to wschód. Układy: 2176-2179 (PL-2000), 2180 (PL-1992), 25833-25835 (UTM).
 Liczby można pisać z kropką albo przecinkiem.";
@@ -59,6 +62,32 @@ fn run(args: &[String]) -> Result<String, String> {
             let (az, d) = azimuth_distance(Point2::new(c[0], c[1]), Point2::new(c[2], c[3]))
                 .ok_or("punkty się pokrywają, azymut jest nieokreślony")?;
             Ok(format!("{:.4} {:.4}", rad_to_grad(az), d))
+        }
+        ("skala", [epsg, x, y]) => {
+            let (crs, p) = (crs(epsg)?, Point2::new(number(x)?, number(y)?));
+            Ok(format!(
+                "{:.8} {:.5}",
+                crs.scale(p),
+                rad_to_grad(crs.convergence(p))
+            ))
+        }
+        ("redukcja", [epsg, coords @ ..]) if coords.len() == 4 => {
+            let (crs, c) = (crs(epsg)?, numbers(coords)?);
+            let (a, b) = (Point2::new(c[0], c[1]), Point2::new(c[2], c[3]));
+            let (_, d) = azimuth_distance(a, b).ok_or("punkty się pokrywają")?;
+            Ok(format!(
+                "{:.4} {:.8} {:.4}",
+                d,
+                crs.line_scale(a, b),
+                crs.ellipsoidal_distance(a, b)
+            ))
+        }
+        ("pole-elipsoida", [epsg, coords @ ..]) if coords.len() >= 6 && coords.len() % 2 == 0 => {
+            let points: Vec<Point2> = numbers(coords)?
+                .chunks(2)
+                .map(|c| Point2::new(c[0], c[1]))
+                .collect();
+            Ok(format!("{:.4}", crs(epsg)?.ellipsoidal_area(&points)))
         }
         ("pole", coords) if coords.len() >= 6 && coords.len() % 2 == 0 => {
             let points: Vec<Point2> = numbers(coords)?
@@ -116,6 +145,20 @@ mod tests {
         );
         assert_eq!(call("azymut 0 0 100 100").unwrap(), "50.0000 141.4214");
         assert_eq!(call("pole 0 0 100 0 100 100 0 100").unwrap(), "10000.0000");
+        // Warszawa w strefie 7: skala i zbieżność (0,00964377° = 0,01072g) jak w PROJ.
+        assert_eq!(
+            call("skala 2178 5788456.48654 7500833.51239").unwrap(),
+            "0.99992301 0.01072"
+        );
+        assert_eq!(
+            call("redukcja 2178 5788456.49 7500833.51 5788456.49 7501833.51").unwrap(),
+            "1000.0000 0.99992302 1000.0770"
+        );
+        assert_eq!(
+            call("pole-elipsoida 2178 5788400 7500800 5788500 7500800 5788500 7500900 5788400 7500900")
+                .unwrap(),
+            "10001.5400"
+        );
     }
 
     #[test]

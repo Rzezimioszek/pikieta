@@ -2366,6 +2366,7 @@ version = "0.1.0"
 name = "pikieta-crs"
 version = "0.1.0"
 dependencies = [
+ "pikieta-calc",
  "pikieta-core",
 ]
 

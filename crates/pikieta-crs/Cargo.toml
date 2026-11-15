@@ -7,3 +7,4 @@ license.workspace = true
 
 [dependencies]
 pikieta-core.workspace = true
+pikieta-calc.workspace = true

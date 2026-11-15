@@ -21,6 +21,8 @@ pub struct TransverseMercator {
     e: f64,
     /// Skala na południku osiowym razy promień prostujący.
     k0_a: f64,
+    /// Stosunek półosi b/a.
+    axis_ratio: f64,
     alpha: [f64; 4],
     beta: [f64; 4],
 }
@@ -38,6 +40,7 @@ impl TransverseMercator {
             false_northing,
             e: (f * (2.0 - f)).sqrt(),
             k0_a: k0 * rectifying_radius,
+            axis_ratio: 1.0 - f,
             alpha: [
                 n / 2.0 - 2.0 / 3.0 * n2 + 5.0 / 16.0 * n3 + 41.0 / 180.0 * n4,
                 13.0 / 48.0 * n2 - 3.0 / 5.0 * n3 + 557.0 / 1440.0 * n4,
@@ -79,6 +82,36 @@ impl TransverseMercator {
             self.k0_a * xi + self.false_northing,
             self.k0_a * eta + self.false_easting,
         )
+    }
+
+    /// Skala liniowa odwzorowania i zbieżność południków (w radianach) w punkcie.
+    ///
+    /// Zbieżność jest dodatnia na wschód od południka osiowego (półkula północna):
+    /// azymut geodezyjny = azymut topograficzny + zbieżność.
+    pub fn scale_convergence(&self, g: Geodetic) -> (f64, f64) {
+        let phi = g.lat.to_radians();
+        let dl = g.lon.to_radians() - self.lon0;
+
+        let sin_phi = phi.sin();
+        let t = (sin_phi.atanh() - self.e * (self.e * sin_phi).atanh()).sinh();
+        let xi0 = t.atan2(dl.cos());
+        let eta0 = (dl.sin() / t.hypot(1.0)).atanh();
+
+        let (mut sigma, mut tau) = (1.0, 0.0);
+        for (j, a) in self.alpha.iter().enumerate() {
+            let k = 2.0 * (j + 1) as f64;
+            sigma += k * a * (k * xi0).cos() * (k * eta0).cosh();
+            tau += k * a * (k * xi0).sin() * (k * eta0).sinh();
+        }
+
+        let reduced_tan = self.axis_ratio * phi.tan();
+        let scale = self.k0_a / GRS80_A
+            * ((1.0 + reduced_tan * reduced_tan) * (sigma * sigma + tau * tau)
+                / (t * t + dl.cos() * dl.cos()))
+            .sqrt();
+        let (h, tl) = (t.hypot(1.0), t * dl.tan());
+        let convergence = (tau * h + sigma * tl).atan2(sigma * h - tau * tl);
+        (scale, convergence)
     }
 
     pub fn inverse(&self, p: Point2) -> Geodetic {

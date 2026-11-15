@@ -101,6 +101,49 @@ impl Crs {
     pub fn inverse(self, p: Point2) -> Geodetic {
         self.projection().inverse(p)
     }
+
+    /// Skala liniowa odwzorowania w punkcie (długość na płaszczyźnie / długość na elipsoidzie).
+    pub fn scale(self, p: Point2) -> f64 {
+        let tm = self.projection();
+        tm.scale_convergence(tm.inverse(p)).0
+    }
+
+    /// Zbieżność południków w punkcie, w radianach; dodatnia na wschód od południka
+    /// osiowego. Azymut geodezyjny = azymut topograficzny + zbieżność.
+    pub fn convergence(self, p: Point2) -> f64 {
+        let tm = self.projection();
+        tm.scale_convergence(tm.inverse(p)).1
+    }
+
+    /// Średnia skala odcinka `a → b` wzorem Simpsona (końce i środek).
+    pub fn line_scale(self, a: Point2, b: Point2) -> f64 {
+        let mid = Point2::new((a.x + b.x) / 2.0, (a.y + b.y) / 2.0);
+        (self.scale(a) + 4.0 * self.scale(mid) + self.scale(b)) / 6.0
+    }
+
+    /// Długość odcinka na elipsoidzie: długość ze współrzędnych podzielona przez
+    /// średnią skalę. Nie uwzględnia redukcji na poziom terenu.
+    pub fn ellipsoidal_distance(self, a: Point2, b: Point2) -> f64 {
+        (b.x - a.x).hypot(b.y - a.y) / self.line_scale(a, b)
+    }
+
+    /// Pole wieloboku na elipsoidzie: pole ze współrzędnych podzielone przez kwadrat
+    /// skali w środku ciężkości wierzchołków.
+    ///
+    /// To przybliżenie właściwe dla działek i obrębów; dla obszarów o rozmiarach
+    /// dziesiątek kilometrów skala zmienia się zbyt mocno w obrębie figury.
+    pub fn ellipsoidal_area(self, points: &[Point2]) -> f64 {
+        if points.len() < 3 {
+            return 0.0;
+        }
+        let n = points.len() as f64;
+        let centroid = Point2::new(
+            points.iter().map(|p| p.x).sum::<f64>() / n,
+            points.iter().map(|p| p.y).sum::<f64>() / n,
+        );
+        let k = self.scale(centroid);
+        pikieta_calc::area(points) / (k * k)
+    }
 }
 
 /// Przelicza punkt między dwoma układami płaskimi.
@@ -194,6 +237,80 @@ mod tests {
             assert!((back.lat - g.lat).abs() < 1e-10, "{crs:?}");
             assert!((back.lon - g.lon).abs() < 1e-10, "{crs:?}");
         }
+    }
+
+    /// (EPSG, długość, szerokość, skala, zbieżność w stopniach) z `proj -V`.
+    const FACTORS: &[(u32, f64, f64, f64, f64)] = &[
+        (2178, 21.0122, 52.2297, 0.99992301, 0.00964377),
+        (2178, 22.5, 49.3, 1.00006913, 1.13731294),
+        (2176, 14.25, 49.1, 0.99995983, -0.56690410),
+        (2180, 14.25, 49.1, 1.00077624, -3.59386202),
+        (2180, 24.1, 53.9, 1.00067669, 4.12455321),
+    ];
+
+    #[test]
+    fn scale_and_convergence_match_proj() {
+        for &(epsg, lon, lat, scale, conv_deg) in FACTORS {
+            let crs = Crs::from_epsg(epsg).unwrap();
+            let p = crs.forward(Geodetic::new(lat, lon));
+            let (k, gamma) = (crs.scale(p), crs.convergence(p).to_degrees());
+            assert!(
+                (k - scale).abs() < 1e-8,
+                "EPSG:{epsg}: skala {k}, oczekiwano {scale}"
+            );
+            assert!(
+                (gamma - conv_deg).abs() < 1e-7,
+                "EPSG:{epsg}: zbieżność {gamma}, oczekiwano {conv_deg}"
+            );
+        }
+    }
+
+    #[test]
+    fn scale_on_central_meridian() {
+        let crs = Crs::Pl2000 { zone: 6 };
+        let p = crs.forward(Geodetic::new(52.0, 18.0));
+        assert!((crs.scale(p) - 0.999923).abs() < 1e-12);
+        assert!(crs.convergence(p).abs() < 1e-15);
+    }
+
+    #[test]
+    fn scale_agrees_with_finite_difference() {
+        // Skala z definicji: przyrost na płaszczyźnie do przyrostu łuku południka.
+        let crs = Crs::Pl1992;
+        let (lat, lon, d) = (50.5, 23.0, 1e-5_f64);
+        let a = crs.forward(Geodetic::new(lat - d, lon));
+        let b = crs.forward(Geodetic::new(lat + d, lon));
+        let grid = (b.x - a.x).hypot(b.y - a.y);
+        // Promień krzywizny południka GRS80.
+        let (ae, e2) = (6_378_137.0_f64, 0.006_694_380_022_903_416_f64);
+        let m = ae * (1.0 - e2) / (1.0 - e2 * lat.to_radians().sin().powi(2)).powf(1.5);
+        let arc = m * (2.0 * d).to_radians();
+        let k = crs.scale(crs.forward(Geodetic::new(lat, lon)));
+        assert!((grid / arc - k).abs() < 1e-8, "{} vs {k}", grid / arc);
+    }
+
+    #[test]
+    fn reductions() {
+        // Na skraju PL-1992 skala wynosi około 1,00078: 1 km na płaszczyźnie
+        // to około 0,78 m mniej na elipsoidzie.
+        let crs = Crs::Pl1992;
+        let a = crs.forward(Geodetic::new(49.1, 14.25));
+        let b = Point2::new(a.x, a.y + 1000.0);
+        let k = crs.line_scale(a, b);
+        assert!((k - 1.00077).abs() < 1e-5, "{k}");
+        assert!((crs.ellipsoidal_distance(a, b) - 1000.0 / k).abs() < 1e-9);
+
+        let square = [
+            a,
+            Point2::new(a.x + 100.0, a.y),
+            Point2::new(a.x + 100.0, a.y + 100.0),
+            Point2::new(a.x, a.y + 100.0),
+        ];
+        let area = crs.ellipsoidal_area(&square);
+        let kc = crs.scale(Point2::new(a.x + 50.0, a.y + 50.0));
+        assert!((area - 10_000.0 / (kc * kc)).abs() < 1e-6, "{area}");
+        assert!((10_000.0 - area - 15.5).abs() < 0.1, "{area}");
+        assert_eq!(crs.ellipsoidal_area(&square[..2]), 0.0);
     }
 
     #[test]

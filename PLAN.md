@@ -80,14 +80,15 @@ Zrobione:
 - `pikieta-crs`: odwzorowanie Gaussa-Krügera szeregami Krügera (do n⁴) na GRS80; układy PL-2000 (EPSG:2176–2179), PL-1992 (EPSG:2180) i UTM 33–35 (EPSG:25833–25835); przeliczenia płaskie ↔ geodezyjne i między układami;
 - testy względem programu `proj` (PROJ): 24 punkty kontrolne, zgodność do 0,02 mm, także 9° od południka osiowego;
 - `pikieta-calc`: azymut i długość, metoda biegunowa, domiary prostokątne w obie strony, przecięcie prostych i kierunków (wcięcie kątowe w przód), wcięcie liniowe, pole ze współrzędnych;
-- `pikieta-cli`: polecenie `pikieta` (transformuj, xy, bl, azymut, pole);
+- skala odwzorowania i zbieżność południków w punkcie (zgodne z `proj -V` do 1e-8 i 1e-7°), średnia skala odcinka wzorem Simpsona, długość i pole zredukowane na elipsoidę (pole: skala w środku ciężkości, przybliżenie dla działek i obrębów);
+- `pikieta-cli`: polecenie `pikieta` (transformuj, xy, bl, azymut, pole, skala, redukcja, pole-elipsoida);
 - interfejs: zmiana układu przelicza wpisane punkty, pod kursorem widać B i L.
 
 Do zamknięcia etapu:
 
 - porównać wyniki z C-Geo/WinKalk na rzeczywistych danych (potrzebne zestawy od użytkownika);
 - porównać z punktami kontrolnymi GUGiK, jeśli uda się je pozyskać;
-- dodać skalę i zbieżność południków oraz poprawkę odwzorowawczą długości i pola;
+- dodać redukcję długości na poziom terenu (wysokość nad elipsoidą);
 - reguły zaokrągleń i formatowania wyników w `pikieta-core`.
 
 Poza etapem 1 zostają: układ 1965, wysokości, wcięcie wstecz, transformacje Helmerta, ciągi.

@@ -47,3 +47,17 @@ pub fn to_geodetic(epsg: u32, x: f64, y: f64) -> Option<Vec<f64>> {
     let g = Crs::from_epsg(epsg)?.inverse(Point2::new(x, y));
     Some(vec![g.lat, g.lon])
 }
+
+/// Redukcje odwzorowawcze odcinka A → B w układzie o podanym kodzie EPSG.
+/// Zwraca `[skala odcinka, długość na elipsoidzie, zbieżność południków w A (grady)]`
+/// albo `undefined` dla nieobsługiwanego układu.
+#[wasm_bindgen]
+pub fn line_reduction(epsg: u32, xa: f64, ya: f64, xb: f64, yb: f64) -> Option<Vec<f64>> {
+    let crs = Crs::from_epsg(epsg)?;
+    let (a, b) = (Point2::new(xa, ya), Point2::new(xb, yb));
+    Some(vec![
+        crs.line_scale(a, b),
+        crs.ellipsoidal_distance(a, b),
+        rad_to_grad(crs.convergence(a)),
+    ])
+}
