@@ -60,7 +60,8 @@ Zrobione:
 - workspace Cargo z crate'ami rdzenia i pierwszym zadaniem (azymut i długość) z testami;
 - frontend z mapą OpenLayers i rdzeniem wołanym przez WASM;
 - powłoka Tauri 2;
-- workflowy GitHub Actions: testy rdzenia, build web, desktop (Windows, Linux), APK debug, deploy na GitHub Pages.
+- workflowy GitHub Actions: testy rdzenia, build web, desktop (Windows, Linux), APK debug, deploy na GitHub Pages; pierwsze uruchomienie przeszło dla wszystkich czterech celów;
+- wersja przeglądarkowa jest opublikowana pod https://rzezimioszek.github.io/pikieta/.
 
 Ustalenia z prototypów:
 
@@ -69,7 +70,6 @@ Ustalenia z prototypów:
 
 Do zamknięcia etapu:
 
-- potwierdzić zielone CI dla wszystkich czterech celów (Android nie był budowany lokalnie);
 - sprawdzić klawiaturę numeryczną i mapę na fizycznym telefonie;
 - zebrać zestaw testów porównawczych z C-Geo/WinKalk na etap 1.
 
