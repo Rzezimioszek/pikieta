@@ -73,7 +73,9 @@ Do zamknięcia etapu:
 - sprawdzić klawiaturę numeryczną i mapę na fizycznym telefonie;
 - zebrać zestaw testów porównawczych z C-Geo/WinKalk na etap 1.
 
-## Stan etapu 1
+## Stan etapu 1: zamknięty
+
+Etap zamknięty 15.11.2026 decyzją autora projektu, na podstawie zgodności z PROJ. Porównanie z C-Geo/WinKalk nie zostało wykonane.
 
 Zrobione:
 
@@ -84,14 +86,13 @@ Zrobione:
 - `pikieta-cli`: polecenie `pikieta` (transformuj, xy, bl, azymut, pole, skala, redukcja, pole-elipsoida);
 - interfejs: zmiana układu przelicza wpisane punkty, pod kursorem widać B i L.
 
-Do zamknięcia etapu:
+Przeniesione na później:
 
-- porównać wyniki z C-Geo/WinKalk na rzeczywistych danych (potrzebne zestawy od użytkownika);
-- porównać z punktami kontrolnymi GUGiK, jeśli uda się je pozyskać;
-- dodać redukcję długości na poziom terenu (wysokość nad elipsoidą);
-- reguły zaokrągleń i formatowania wyników w `pikieta-core`.
+- porównanie wyników z C-Geo/WinKalk i punktami kontrolnymi GUGiK, gdy będą dostępne dane (testy do dopisania w dowolnym momencie);
+- reguły zaokrągleń i formatowania wyników w `pikieta-core`: etap 2, razem z raportami;
+- redukcja długości na poziom terenu: etap 4, razem z wysokościami.
 
-Poza etapem 1 zostają: układ 1965, wysokości, wcięcie wstecz, transformacje Helmerta, ciągi.
+Poza zakresem etapu 1 były od początku: układ 1965, wysokości, wcięcie wstecz, transformacje Helmerta, ciągi.
 
 ## Ryzyka
 
