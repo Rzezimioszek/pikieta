@@ -1,0 +1,9 @@
+[package]
+name = "pikieta-calc"
+description = "Obliczenia geodezyjne na płaszczyźnie."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pikieta-core.workspace = true

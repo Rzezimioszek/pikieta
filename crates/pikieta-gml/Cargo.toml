@@ -1,0 +1,9 @@
+[package]
+name = "pikieta-gml"
+description = "Odczyt i zapis GML (geometria 3.2, profil EGiB)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pikieta-core.workspace = true

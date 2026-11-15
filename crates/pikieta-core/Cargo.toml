@@ -1,0 +1,6 @@
+[package]
+name = "pikieta-core"
+description = "Podstawowe typy geodezyjne: punkty, kąty, jednostki."
+version.workspace = true
+edition.workspace = true
+license.workspace = true

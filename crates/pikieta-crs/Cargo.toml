@@ -1,0 +1,9 @@
+[package]
+name = "pikieta-crs"
+description = "Polskie układy współrzędnych: PL-2000, PL-1992, PL-UTM."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pikieta-core.workspace = true

@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = ["crates/*", "app/src-tauri"]
+# `cargo test` / `cargo build` bez argumentów dotyczą tylko rdzenia;
+# powłoka Tauri i wiązania WASM budują się własnymi poleceniami.
+default-members = [
+    "crates/pikieta-core",
+    "crates/pikieta-calc",
+    "crates/pikieta-crs",
+    "crates/pikieta-gml",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+pikieta-core = { path = "crates/pikieta-core", version = "0.1.0" }
+pikieta-calc = { path = "crates/pikieta-calc", version = "0.1.0" }
+
+[profile.release]
+lto = true
+opt-level = "s"
