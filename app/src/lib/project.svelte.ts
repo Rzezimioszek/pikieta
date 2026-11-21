@@ -4,10 +4,24 @@ import { CALCS, type CalcType } from './calcs'
 import type { Pt } from './core'
 import type { BasemapId } from './map'
 
+/** Pozycja raportu; układ odpowiada `pikieta_report::Entry`. */
 export interface ReportEntry {
   title: string
-  lines: string[]
+  params?: [string, string][]
+  table?: { head: string[]; rows: string[][]; right: boolean[] }
+  results?: [string, string][]
+  notes?: string[]
+  /** Wpisy z wcześniejszych wersji. */
+  lines?: string[]
 }
+
+export interface Precision {
+  coord: number
+  length: number
+  angle: number
+  area: number
+}
+export const DEFAULT_PRECISION: Precision = { coord: 2, length: 3, angle: 4, area: 2 }
 
 /** Jedno obliczenie, widoczne na liście po lewej jak rozmowa w czacie. */
 export interface CalcSession {
@@ -22,11 +36,12 @@ export interface CalcSession {
   data: any
 }
 
-interface Saved {
+export interface Saved {
   crs: string
   points: Pt[]
   report: ReportEntry[]
   calcs: CalcSession[]
+  precision: Precision
 }
 
 export type ViewMode = 'map' | 'split' | 'calc'
@@ -75,6 +90,7 @@ export const project = $state<Saved>({
   points: Array.isArray(saved.points) ? saved.points : [],
   report: Array.isArray(saved.report) ? saved.report : [],
   calcs: Array.isArray(saved.calcs) ? saved.calcs.filter((s) => s.type in CALCS) : [],
+  precision: { ...DEFAULT_PRECISION, ...saved.precision },
 })
 
 export function saveProject() {
@@ -103,7 +119,7 @@ export function saveUi() {
 }
 
 /** Stan zależny od urządzenia, nie zapisywany. */
-export const env = $state({ narrow: false })
+export const env = $state({ narrow: false, core: false })
 
 /** Numery zaznaczonych punktów, wspólne dla tabeli i mapy. */
 export const selection = new SvelteSet<string>()
@@ -268,8 +284,8 @@ export function showReport() {
   show({ kind: 'report' })
 }
 
-export function addReport(title: string, lines: string[]) {
-  project.report.push({ title, lines })
+export function addReport(entry: ReportEntry) {
+  project.report.push(entry)
   notify(`Zapisano w raporcie jako pozycję ${project.report.length}.`)
 }
 
@@ -284,14 +300,13 @@ export function downloadText(filename: string, text: string) {
   URL.revokeObjectURL(url)
 }
 
-/** Raport obliczeń jako tekst do zapisania w pliku. */
-export function reportText(crsLabel: string): string {
-  const head = [
-    'Pikieta: raport obliczeń',
-    `Data: ${new Date().toLocaleString('pl-PL')}`,
-    `Układ współrzędnych: ${crsLabel}`,
-    'Współrzędne i długości w metrach, kąty w gradach.',
-  ]
-  const body = project.report.map((e, i) => [`${i + 1}. ${e.title}`, ...e.lines.map((l) => `   ${l}`)].join('\n'))
-  return [head.join('\n'), ...body].join('\n\n') + '\n'
+/** Dane raportu dla rdzenia (`pikieta_report::Report`). */
+export function reportData(crsLabel: string) {
+  return {
+    title: 'Raport obliczeń',
+    date: new Date().toLocaleString('pl-PL'),
+    crs: crsLabel,
+    notes: ['Współrzędne i długości w metrach, kąty w gradach.', 'Wyniki zaokrąglone regułą „do parzystej”.'],
+    entries: project.report,
+  }
 }

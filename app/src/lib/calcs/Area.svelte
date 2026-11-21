@@ -6,7 +6,7 @@
   import type { Sketch } from '../map'
   import { addReport, findPoint, project, selection } from '../project.svelte'
   import type { Column } from '../table'
-  import { f2, f3, isBlank, keepTrailing, tableLines } from './util'
+  import { fc, fha, fl, fm2, isBlank, keepTrailing, moveRow, reportTable, selfIntersects } from './util'
 
   interface Props {
     data: AreaData
@@ -46,6 +46,8 @@
   const missing = $derived(items.some((i) => i.tone === 'error'))
   const area = $derived(vertices.length >= 3 && !missing ? polygonArea(epsg, vertices) : null)
   const perimeter = $derived(sides.reduce((s, d) => s + d, 0))
+  const crossed = $derived(selfIntersects(vertices))
+  const CROSSED = 'Boki wieloboku się przecinają: pole jest błędne, sprawdź kolejność wierzchołków.'
 
   $effect(() => onsketch({ paths: [vertices], closed: true }))
 
@@ -61,9 +63,9 @@
         keepTrailing(data.rows, empty)
       },
     },
-    { key: 'x', label: 'X', width: 116, align: 'right', value: (i) => (i.p ? f2(i.p.x) : '') },
-    { key: 'y', label: 'Y', width: 116, align: 'right', value: (i) => (i.p ? f2(i.p.y) : '') },
-    { key: 'side', label: 'Bok do następnego [m]', width: 160, align: 'right', value: (i) => (i.side === undefined ? '' : f3(i.side)) },
+    { key: 'x', label: 'X', width: 116, align: 'right', value: (i) => (i.p ? fc(i.p.x) : '') },
+    { key: 'y', label: 'Y', width: 116, align: 'right', value: (i) => (i.p ? fc(i.p.y) : '') },
+    { key: 'side', label: 'Bok do następnego [m]', width: 160, align: 'right', value: (i) => (i.side === undefined ? '' : fl(i.side)) },
     { key: 'status', label: 'Uwagi', width: 110, value: (i) => i.status, tone: (i) => i.tone },
   ]
 
@@ -73,15 +75,19 @@
   }
 
   function save() {
-    addReport(`${title} (${crsLabel})`, [
-      ...tableLines(
-        ['Wierzchołek', 'X', 'Y', 'Bok [m]'],
-        vertices.map((p, i) => [p.id, f2(p.x), f2(p.y), f3(sides[i])]),
+    addReport({
+      title: `${title} (${crsLabel})`,
+      table: reportTable(
+        ['Wierzchołek', 'X', 'Y', 'Bok do następnego [m]'],
+        vertices.map((p, i) => [p.id, fc(p.x), fc(p.y), fl(sides[i])]),
       ),
-      `Pole ze współrzędnych: ${f2(area!.grid)} m² (${(area!.grid / 10000).toFixed(4)} ha)`,
-      `Pole na elipsoidzie: ${f2(area!.ellipsoidal)} m²`,
-      `Obwód: ${f3(perimeter)} m`,
-    ])
+      results: [
+        ['Pole ze współrzędnych', `${fm2(area!.grid)} m² (${fha(area!.grid)} ha)`],
+        ['Pole na elipsoidzie', `${fm2(area!.ellipsoidal)} m²`],
+        ['Obwód', `${fl(perimeter)} m`],
+      ],
+      notes: crossed ? [CROSSED] : [],
+    })
   }
 </script>
 
@@ -100,6 +106,8 @@
     editing
     live
     canDelete={(i) => !isBlank(i.src)}
+    canMove={(i) => !isBlank(i.src)}
+    onmove={(from, to) => moveRow(data.rows, from, to, empty)}
     ondelete={(_, i) => {
       data.rows.splice(i, 1)
       keepTrailing(data.rows, empty)
@@ -107,12 +115,13 @@
     maxHeight="min(50vh, 440px)"
   />
 
+  {#if area && crossed}<p class="error" role="alert">{CROSSED}</p>{/if}
   {#if area}
     <dl class="card result">
-      <dt>Pole ze współrzędnych</dt><dd>{f2(area.grid)} m²</dd>
-      <dt>Pole w hektarach</dt><dd>{(area.grid / 10000).toFixed(4)} ha</dd>
-      <dt>Pole na elipsoidzie</dt><dd>{f2(area.ellipsoidal)} m²</dd>
-      <dt>Obwód</dt><dd>{f3(perimeter)} m</dd>
+      <dt>Pole ze współrzędnych</dt><dd>{fm2(area.grid)} m²</dd>
+      <dt>Pole w hektarach</dt><dd>{fha(area.grid)} ha</dd>
+      <dt>Pole na elipsoidzie</dt><dd>{fm2(area.ellipsoidal)} m²</dd>
+      <dt>Obwód</dt><dd>{fl(perimeter)} m</dd>
       <dt>Wierzchołki</dt><dd>{vertices.length}</dd>
     </dl>
   {:else}

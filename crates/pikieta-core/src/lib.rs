@@ -4,6 +4,9 @@
 
 use std::f64::consts::PI;
 
+mod format;
+pub use format::{round_half_even, Precision};
+
 /// Punkt w układzie płaskim (np. PL-2000), współrzędne w metrach.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point2 {

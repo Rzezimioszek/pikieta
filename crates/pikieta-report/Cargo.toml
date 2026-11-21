@@ -1,0 +1,10 @@
+[package]
+name = "pikieta-report"
+description = "Raporty obliczeń Pikiety: tekst i HTML do druku."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

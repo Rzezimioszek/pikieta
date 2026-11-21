@@ -5,7 +5,7 @@
   import type { Sketch } from '../map'
   import { addNewPoints, addReport, findPoint, nextId } from '../project.svelte'
   import PointField from './PointField.svelte'
-  import { coords, f2, f3, num } from './util'
+  import { coords, fc, fl, num } from './util'
 
   interface Props {
     data: DistIntData
@@ -37,12 +37,17 @@
   )
 
   function save() {
-    addReport(`${title} (${crsLabel})`, [
-      `Punkt A ${a!.id}: ${coords(a!)}`,
-      `Punkt B ${b!.id}: ${coords(b!)}`,
-      `Długość od A: ${f3(ra!)} m, od B: ${f3(rb!)} m, strona ${data.side === 'left' ? 'lewa' : 'prawa'} względem A→B`,
-      `Punkt ${id}: ${coords(p!)}`,
-    ])
+    addReport({
+      title: `${title} (${crsLabel})`,
+      params: [
+        [`Punkt A ${a!.id}`, coords(a!)],
+        [`Punkt B ${b!.id}`, coords(b!)],
+        ['Długość od A', `${fl(ra!)} m`],
+        ['Długość od B', `${fl(rb!)} m`],
+        ['Strona względem A→B', data.side === 'left' ? 'lewa' : 'prawa'],
+      ],
+      results: [[`Punkt ${id}`, coords(p!)]],
+    })
   }
 </script>
 
@@ -66,8 +71,8 @@
     <p class="error" role="alert">Okręgi się nie przecinają albo punkty A i B się pokrywają.</p>
   {:else if p}
     <dl class="card result">
-      <dt>X</dt><dd>{f2(p.x)}</dd>
-      <dt>Y</dt><dd>{f2(p.y)}</dd>
+      <dt>X</dt><dd>{fc(p.x)}</dd>
+      <dt>Y</dt><dd>{fc(p.y)}</dd>
       {#if outcome}
         <dt>Rozwiązanie po drugiej stronie</dt><dd class="muted">{coords(outcome.other)}</dd>
       {/if}

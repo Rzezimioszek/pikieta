@@ -2,7 +2,7 @@
   import DataTable from './DataTable.svelte'
   import Icon from './Icon.svelte'
   import type { Pt } from './core'
-  import { num } from './calcs/util'
+  import { fc, num } from './calcs/util'
   import {
     addPoints,
     findPoint,
@@ -53,7 +53,7 @@
       width: 128,
       align: 'right',
       edit: 'number',
-      value: (p) => p.x.toFixed(2),
+      value: (p) => fc(p.x),
       set: (p, v) => setNumber('X', (n) => (p.x = n!))(v),
     },
     {
@@ -62,7 +62,7 @@
       width: 128,
       align: 'right',
       edit: 'number',
-      value: (p) => p.y.toFixed(2),
+      value: (p) => fc(p.y),
       set: (p, v) => setNumber('Y', (n) => (p.y = n!))(v),
     },
     {
@@ -71,7 +71,7 @@
       width: 90,
       align: 'right',
       edit: 'number',
-      value: (p) => (p.h === null ? '' : p.h.toFixed(2)),
+      value: (p) => (p.h === null ? '' : fc(p.h)),
       set: (p, v) => setNumber('H', (n) => (p.h = n), true)(v),
     },
     { key: 'code', label: 'Kod', width: 160, edit: 'text', value: (p) => p.code, set: (p, v) => (p.code = v.trim()) },

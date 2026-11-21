@@ -7,7 +7,7 @@
   import { addNewPoints, addReport, findPoint } from '../project.svelte'
   import type { Column } from '../table'
   import PointField from './PointField.svelte'
-  import { assignIds, coords, pointState, f2, f3, f4, isBlank, keepTrailing, num, tableLines, turn } from './util'
+  import { assignIds, coords, fa, fc, fl, isBlank, keepTrailing, moveRow, num, pointState, reportTable, turn } from './util'
 
   interface Props {
     data: PolarData
@@ -73,8 +73,8 @@
     },
     { key: 'angle', label: 'Kąt [g]', width: 96, align: 'right', edit: 'number', value: (i) => i.src.angle, set: edit('angle') },
     { key: 'dist', label: 'Długość [m]', width: 104, align: 'right', edit: 'number', value: (i) => i.src.dist, set: edit('dist') },
-    { key: 'x', label: 'X', width: 116, align: 'right', value: (i) => (i.p ? f2(i.p.x) : '') },
-    { key: 'y', label: 'Y', width: 116, align: 'right', value: (i) => (i.p ? f2(i.p.y) : '') },
+    { key: 'x', label: 'X', width: 116, align: 'right', value: (i) => (i.p ? fc(i.p.x) : '') },
+    { key: 'y', label: 'Y', width: 116, align: 'right', value: (i) => (i.p ? fc(i.p.y) : '') },
     { key: 'status', label: 'Stan', width: 130, value: (i) => i.status, tone: (i) => i.tone },
   ]
 
@@ -85,15 +85,18 @@
   }
 
   function save() {
-    addReport(`${title} (${crsLabel})`, [
-      `Stanowisko ${st!.id}: ${coords(st!)}`,
-      `Nawiązanie ${ref!.id}: ${coords(ref!)}`,
-      `Azymut nawiązania: ${f4(refAz!)} g`,
-      ...tableLines(
+    addReport({
+      title: `${title} (${crsLabel})`,
+      params: [
+        [`Stanowisko ${st!.id}`, coords(st!)],
+        [`Nawiązanie ${ref!.id}`, coords(ref!)],
+        ['Azymut nawiązania', `${fa(refAz!)} g`],
+      ],
+      table: reportTable(
         ['Nr', 'Kąt [g]', 'Długość [m]', 'X', 'Y'],
-        computed.map((i) => [i.id, f4(num(i.src.angle)!), f3(num(i.src.dist)!), f2(i.p!.x), f2(i.p!.y)]),
+        computed.map((i) => [i.id, fa(num(i.src.angle)!), fl(num(i.src.dist)!), fc(i.p!.x), fc(i.p!.y)]),
       ),
-    ])
+    })
   }
 </script>
 
@@ -103,7 +106,7 @@
     <PointField label="Nawiązanie" bind:value={data.ref} />
     <div class="field">
       Azymut nawiązania
-      <output>{refAz === null ? '—' : `${f4(refAz)} g`}</output>
+      <output>{refAz === null ? '—' : `${fa(refAz)} g`}</output>
     </div>
   </div>
 
@@ -116,6 +119,8 @@
     editing
     live
     canDelete={(i) => !isBlank(i.src)}
+    canMove={(i) => !isBlank(i.src)}
+    onmove={(from, to) => moveRow(data.rows, from, to, empty)}
     ondelete={(_, i) => {
       data.rows.splice(i, 1)
       keepTrailing(data.rows, empty)

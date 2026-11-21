@@ -7,7 +7,7 @@
   import { addNewPoints, addReport, findPoint } from '../project.svelte'
   import type { Column } from '../table'
   import PointField from './PointField.svelte'
-  import { assignIds, coords, pointState, f2, f3, isBlank, keepTrailing, num, tableLines } from './util'
+  import { assignIds, coords, fc, fl, isBlank, keepTrailing, moveRow, num, pointState, reportTable } from './util'
 
   interface Props {
     data: FromOffsetData
@@ -76,8 +76,8 @@
     },
     { key: 'along', label: 'Bieżąca [m]', width: 104, align: 'right', edit: 'number', value: (i) => i.src.along, set: edit('along') },
     { key: 'offset', label: 'Domiar [m]', width: 104, align: 'right', edit: 'number', value: (i) => i.src.offset, set: edit('offset') },
-    { key: 'x', label: 'X', width: 116, align: 'right', value: (i) => (i.p ? f2(i.p.x) : '') },
-    { key: 'y', label: 'Y', width: 116, align: 'right', value: (i) => (i.p ? f2(i.p.y) : '') },
+    { key: 'x', label: 'X', width: 116, align: 'right', value: (i) => (i.p ? fc(i.p.x) : '') },
+    { key: 'y', label: 'Y', width: 116, align: 'right', value: (i) => (i.p ? fc(i.p.y) : '') },
     { key: 'status', label: 'Stan', width: 130, value: (i) => i.status, tone: (i) => i.tone },
   ]
 
@@ -88,15 +88,18 @@
   }
 
   function save() {
-    addReport(`${title} (${crsLabel})`, [
-      `Początek linii ${a!.id}: ${coords(a!)}`,
-      `Koniec linii ${b!.id}: ${coords(b!)}`,
-      'Domiar dodatni po prawej stronie linii.',
-      ...tableLines(
+    addReport({
+      title: `${title} (${crsLabel})`,
+      params: [
+        [`Początek linii ${a!.id}`, coords(a!)],
+        [`Koniec linii ${b!.id}`, coords(b!)],
+      ],
+      table: reportTable(
         ['Nr', 'Bieżąca [m]', 'Domiar [m]', 'X', 'Y'],
-        computed.map((i) => [i.id, f3(num(i.src.along)!), f3(num(i.src.offset) ?? 0), f2(i.p!.x), f2(i.p!.y)]),
+        computed.map((i) => [i.id, fl(num(i.src.along)!), fl(num(i.src.offset) ?? 0), fc(i.p!.x), fc(i.p!.y)]),
       ),
-    ])
+      notes: ['Domiar dodatni po prawej stronie linii.'],
+    })
   }
 </script>
 
@@ -115,6 +118,8 @@
     editing
     live
     canDelete={(i) => !isBlank(i.src)}
+    canMove={(i) => !isBlank(i.src)}
+    onmove={(from, to) => moveRow(data.rows, from, to, empty)}
     ondelete={(_, i) => {
       data.rows.splice(i, 1)
       keepTrailing(data.rows, empty)

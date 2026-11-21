@@ -1,5 +1,6 @@
 // Typowana nakładka na rdzeń Pikiety (Rust → WebAssembly).
 // Funkcji wolno używać dopiero po rozstrzygnięciu `coreReady`.
+import { env } from './project.svelte'
 import init, * as w from './wasm/pikieta.js'
 
 /** Punkt w konwencji geodezyjnej: x na północ, y na wschód. */
@@ -15,7 +16,20 @@ export interface Pt extends XY {
 }
 
 /** Rozstrzyga się wersją rdzenia, gdy moduł WASM jest gotowy. */
-export const coreReady: Promise<string> = init().then(() => w.core_version())
+export const coreReady: Promise<string> = init().then(() => {
+  // Flaga jest reaktywna: widoki sformatowane przed wczytaniem rdzenia odświeżą się.
+  env.core = true
+  return w.core_version()
+})
+
+/** Zaokrąglenie regułą „do parzystej” (rdzeń); przed wczytaniem rdzenia zwykłe toFixed. */
+export function fmt(value: number, decimals: number): string {
+  return env.core ? w.fmt(value, decimals) : value.toFixed(decimals)
+}
+
+export function renderReport(report: object, format: 'txt' | 'html'): string {
+  return w.render_report(JSON.stringify(report), format)
+}
 
 export const epsgOf = (code: string) => Number(code.replace('EPSG:', ''))
 

@@ -5,7 +5,7 @@
   import type { Sketch } from '../map'
   import { addNewPoints, addReport, findPoint, nextId } from '../project.svelte'
   import PointField from './PointField.svelte'
-  import { coords, f2 } from './util'
+  import { coords, fc } from './util'
 
   interface Props {
     data: LineIntData
@@ -31,11 +31,16 @@
 
   function save() {
     const [a, b, c, d] = pts
-    addReport(`${title} (${crsLabel})`, [
-      `Prosta 1: ${a!.id} ${coords(a!)}  →  ${b!.id} ${coords(b!)}`,
-      `Prosta 2: ${c!.id} ${coords(c!)}  →  ${d!.id} ${coords(d!)}`,
-      `Punkt ${id}: ${coords(p!)}`,
-    ])
+    addReport({
+      title: `${title} (${crsLabel})`,
+      params: [
+        [`Prosta 1: początek ${a!.id}`, coords(a!)],
+        [`Prosta 1: koniec ${b!.id}`, coords(b!)],
+        [`Prosta 2: początek ${c!.id}`, coords(c!)],
+        [`Prosta 2: koniec ${d!.id}`, coords(d!)],
+      ],
+      results: [[`Punkt ${id}`, coords(p!)]],
+    })
   }
 </script>
 
@@ -52,8 +57,8 @@
     <p class="error" role="alert">Proste są równoległe albo punkty jednej prostej się pokrywają.</p>
   {:else if p}
     <dl class="card result">
-      <dt>X</dt><dd>{f2(p.x)}</dd>
-      <dt>Y</dt><dd>{f2(p.y)}</dd>
+      <dt>X</dt><dd>{fc(p.x)}</dd>
+      <dt>Y</dt><dd>{fc(p.y)}</dd>
     </dl>
   {:else}
     <p class="hint">Uzupełnij cztery punkty.</p>

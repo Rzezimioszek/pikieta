@@ -7,7 +7,7 @@
   import { addReport, findPoint, project, selection } from '../project.svelte'
   import type { Column } from '../table'
   import PointField from './PointField.svelte'
-  import { coords, f2, f3, isBlank, keepTrailing, tableLines } from './util'
+  import { coords, fc, fl, isBlank, keepTrailing, moveRow, reportTable } from './util'
 
   interface Props {
     data: OffsetData
@@ -66,10 +66,10 @@
         keepTrailing(data.rows, empty)
       },
     },
-    { key: 'x', label: 'X', width: 116, align: 'right', value: (i) => (i.p ? f2(i.p.x) : '') },
-    { key: 'y', label: 'Y', width: 116, align: 'right', value: (i) => (i.p ? f2(i.p.y) : '') },
-    { key: 'along', label: 'Bieżąca [m]', width: 104, align: 'right', value: (i) => (i.along === undefined ? '' : f3(i.along)) },
-    { key: 'offset', label: 'Domiar [m]', width: 104, align: 'right', value: (i) => (i.offset === undefined ? '' : f3(i.offset)) },
+    { key: 'x', label: 'X', width: 116, align: 'right', value: (i) => (i.p ? fc(i.p.x) : '') },
+    { key: 'y', label: 'Y', width: 116, align: 'right', value: (i) => (i.p ? fc(i.p.y) : '') },
+    { key: 'along', label: 'Bieżąca [m]', width: 104, align: 'right', value: (i) => (i.along === undefined ? '' : fl(i.along)) },
+    { key: 'offset', label: 'Domiar [m]', width: 104, align: 'right', value: (i) => (i.offset === undefined ? '' : fl(i.offset)) },
     { key: 'status', label: 'Strona', width: 120, value: (i) => i.status, tone: (i) => i.tone },
   ]
 
@@ -79,15 +79,18 @@
   }
 
   function save() {
-    addReport(`${title} (${crsLabel})`, [
-      `Początek linii ${a!.id}: ${coords(a!)}`,
-      `Koniec linii ${b!.id}: ${coords(b!)}`,
-      'Domiar dodatni po prawej stronie linii.',
-      ...tableLines(
-        ['Nr', 'Bieżąca [m]', 'Domiar [m]'],
-        done.map((i) => [i.p!.id, f3(i.along!), f3(i.offset!)]),
+    addReport({
+      title: `${title} (${crsLabel})`,
+      params: [
+        [`Początek linii ${a!.id}`, coords(a!)],
+        [`Koniec linii ${b!.id}`, coords(b!)],
+      ],
+      table: reportTable(
+        ['Nr', 'X', 'Y', 'Bieżąca [m]', 'Domiar [m]'],
+        done.map((i) => [i.p!.id, fc(i.p!.x), fc(i.p!.y), fl(i.along!), fl(i.offset!)]),
       ),
-    ])
+      notes: ['Domiar dodatni po prawej stronie linii.'],
+    })
   }
 </script>
 
@@ -111,6 +114,8 @@
     editing
     live
     canDelete={(i) => !isBlank(i.src)}
+    canMove={(i) => !isBlank(i.src)}
+    onmove={(from, to) => moveRow(data.rows, from, to, empty)}
     ondelete={(_, i) => {
       data.rows.splice(i, 1)
       keepTrailing(data.rows, empty)

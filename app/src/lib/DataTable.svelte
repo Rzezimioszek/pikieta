@@ -16,6 +16,9 @@
     selection?: SvelteSet<string>
     canDelete?: (row: R, index: number) => boolean
     ondelete?: (row: R, index: number) => void
+    /** Zmiana kolejności wierszy; indeksy w tablicy `rows`. Niedostępna przy sortowaniu. */
+    onmove?: (from: number, to: number) => void
+    canMove?: (row: R, index: number) => boolean
     onactivate?: (row: R) => void
     empty?: string
     /** Wysokość tabeli dopasowana do treści, ale nie większa niż podana (CSS). */
@@ -32,6 +35,8 @@
     selection,
     canDelete,
     ondelete,
+    onmove,
+    canMove,
     onactivate,
     empty = 'Brak danych.',
     maxHeight,
@@ -46,9 +51,10 @@
   let sort = $state<{ key: string; dir: 1 | -1 } | null>(null)
   let widths = $state<Record<string, number>>({})
   let anchor: number | null = null
+  let drag = $state<{ from: number; to: number } | null>(null)
 
   const width = (c: Column<R>) => widths[c.key] ?? c.width
-  const totalWidth = $derived(44 + columns.reduce((s, c) => s + width(c), 0))
+  const totalWidth = $derived(52 + columns.reduce((s, c) => s + width(c), 0))
 
   const collator = new Intl.Collator('pl', { numeric: true, sensitivity: 'base' })
   function compare(a: string, b: string) {
@@ -120,8 +126,45 @@
     el?.select()
   }
 
+  /** Przenosi wiersz z pozycji `from` na `to` (pozycje w kolejności wyświetlania). */
+  function moveRow(from: number, to: number) {
+    if (!onmove || from === to || to < 0 || to >= items.length) return false
+    if (!(canMove?.(items[to].row, items[to].index) ?? true)) return false
+    onmove(items[from].index, items[to].index)
+    return true
+  }
+
+  /** Przeciąganie za kolumnę numerów: działa myszą i palcem (zdarzenia wskaźnika). */
+  function startDrag(e: PointerEvent, pos: number) {
+    if ((e.target as HTMLElement).closest('button') || !wrap) return
+    e.preventDefault()
+    const body = wrap.querySelector('tbody')!
+    drag = { from: pos, to: pos }
+    const move = (ev: PointerEvent) => {
+      const r = wrap!.getBoundingClientRect()
+      // Przy krawędzi tabela przewija się sama.
+      if (ev.clientY < r.top + ROW_H * 1.5) wrap!.scrollTop -= ROW_H / 2
+      else if (ev.clientY > r.bottom - ROW_H / 2) wrap!.scrollTop += ROW_H / 2
+      const at = Math.floor((ev.clientY - body.getBoundingClientRect().top) / ROW_H)
+      drag = { from: pos, to: Math.max(0, Math.min(items.length - 1, at)) }
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointercancel', up)
+      if (drag) moveRow(drag.from, drag.to)
+      drag = null
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up, { once: true })
+    window.addEventListener('pointercancel', up, { once: true })
+  }
+
   function onKey(e: KeyboardEvent, pos: number, ci: number) {
-    if (e.key === 'Enter' || e.key === 'ArrowDown') {
+    if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault()
+      const to = pos + (e.key === 'ArrowUp' ? -1 : 1)
+      if (moveRow(pos, to)) focusCell(to, ci)
+    } else if (e.key === 'Enter' || e.key === 'ArrowDown') {
       e.preventDefault()
       if (!live) (e.currentTarget as HTMLInputElement).dispatchEvent(new Event('change'))
       focusCell(pos + 1, ci)
@@ -161,7 +204,7 @@
 >
   <table style:width={`${totalWidth}px`}>
     <colgroup>
-      <col style:width="44px" />
+      <col style:width="52px" />
       {#each columns as c (c.key)}<col style:width={`${width(c)}px`} />{/each}
     </colgroup>
     <thead>
@@ -187,13 +230,22 @@
     <tbody>
       {#if start > 0}<tr class="spacer" style:height={`${start * ROW_H}px`}><td colspan={columns.length + 1}></td></tr>{/if}
       {#each visible as it (it.key)}
+        {@const movable = !!onmove && !sort && (canMove?.(it.row, it.index) ?? true)}
         <tr
           class:selected={selection?.has(it.key)}
+          class:dragging={drag?.from === it.pos}
+          class:drop-above={drag && drag.to === it.pos && drag.to < drag.from}
+          class:drop-below={drag && drag.to === it.pos && drag.to > drag.from}
           style:height={`${ROW_H}px`}
           onclick={(e) => select(it.pos, it.key, e)}
           ondblclick={(e) => !(e.target as HTMLElement).closest('input') && onactivate?.(it.row)}
         >
-          <td class="rn">
+          <td
+            class="rn"
+            class:movable
+            title={movable ? 'Przeciągnij, żeby zmienić kolejność (albo Alt+↑/↓ w komórce)' : undefined}
+            onpointerdown={movable ? (e) => startDrag(e, it.pos) : undefined}
+          >
             <span>{it.pos + 1}</span>
             {#if ondelete && (canDelete?.(it.row, it.index) ?? true)}
               <button class="del" aria-label={`Usuń wiersz ${it.pos + 1}`} onclick={() => ondelete(it.row, it.index)}>×</button>
@@ -347,23 +399,45 @@
   th.rn {
     z-index: 3;
   }
+  .rn.movable {
+    cursor: grab;
+    touch-action: none;
+  }
+  .rn.movable::before {
+    content: '⋮⋮';
+    float: left;
+    letter-spacing: -2px;
+    opacity: 0.35;
+  }
   .del {
+    position: absolute;
+    top: 4px;
+    right: 3px;
     display: none;
-    width: 100%;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     padding: 0;
     border: none;
     border-radius: 6px;
     background: var(--danger);
     color: #fff;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     line-height: 1;
   }
   tr:hover .del {
     display: block;
   }
   tr:hover .rn > span:has(+ .del) {
-    display: none;
+    visibility: hidden;
+  }
+  tr.dragging td {
+    opacity: 0.45;
+  }
+  tr.drop-above td {
+    box-shadow: inset 0 2px 0 var(--accent);
+  }
+  tr.drop-below td {
+    box-shadow: inset 0 -2px 0 var(--accent);
   }
   td:has(input) {
     padding: 0;

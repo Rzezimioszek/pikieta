@@ -4,6 +4,8 @@
 //! Pola mogą być rozdzielone spacjami, tabulatorami, średnikami albo (gdy nie ma
 //! innych separatorów) przecinkami. Liczby mogą mieć kropkę albo przecinek dziesiętny.
 
+use pikieta_core::round_half_even;
+
 /// Punkt z wykazu współrzędnych. `x` to północ, `y` to wschód.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PointRecord {
@@ -114,21 +116,20 @@ pub fn parse_points(text: &str, order: ColumnOrder) -> Parsed {
     parsed
 }
 
-/// Zapisuje wykaz współrzędnych rozdzielony tabulatorami, z kropką dziesiętną.
+/// Zapisuje wykaz współrzędnych rozdzielony tabulatorami, z kropką dziesiętną,
+/// zaokrąglony regułą „do parzystej”.
 pub fn write_points(points: &[PointRecord], order: ColumnOrder, decimals: usize) -> String {
+    let f = |v: f64| round_half_even(v, decimals);
     let mut out = String::new();
     for p in points {
         let (first, second) = match order {
             ColumnOrder::NrXY => (p.x, p.y),
             ColumnOrder::NrYX => (p.y, p.x),
         };
-        out.push_str(&format!(
-            "{}\t{first:.decimals$}\t{second:.decimals$}",
-            p.id
-        ));
+        out.push_str(&format!("{}\t{}\t{}", p.id, f(first), f(second)));
         match (p.h, p.code.is_empty()) {
-            (Some(h), true) => out.push_str(&format!("\t{h:.decimals$}")),
-            (Some(h), false) => out.push_str(&format!("\t{h:.decimals$}\t{}", p.code)),
+            (Some(h), true) => out.push_str(&format!("\t{}", f(h))),
+            (Some(h), false) => out.push_str(&format!("\t{}\t{}", f(h), p.code)),
             (None, false) => out.push_str(&format!("\t\t{}", p.code)),
             (None, true) => {}
         }

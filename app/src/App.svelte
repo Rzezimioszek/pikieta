@@ -7,6 +7,7 @@
   import ToolPanel from './lib/ToolPanel.svelte'
   import ViewSwitch from './lib/ViewSwitch.svelte'
   import { coreReady, epsgOf, toGeodetic, transformXY, type XY } from './lib/core'
+  import { openProjectFile, saveProjectFile } from './lib/files.svelte'
   import { BASEMAPS, CRS_LIST, createMap, type MapHandle, type Sketch } from './lib/map'
   import {
     addPoints,
@@ -103,7 +104,14 @@
       if (!(e.target as HTMLElement).closest?.('[data-pick]')) picker.fill = null
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      const ctrl = e.ctrlKey || e.metaKey
+      if (ctrl && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        saveProjectFile()
+      } else if (ctrl && e.key.toLowerCase() === 'o') {
+        e.preventDefault()
+        openProjectFile().then((pts) => pts?.length && zoomTo(pts))
+      } else if (e.key === 'Escape') {
         picker.fill = null
         ui.addByClick = false
       }

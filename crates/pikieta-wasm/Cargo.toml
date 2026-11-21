@@ -13,4 +13,5 @@ pikieta-core.workspace = true
 pikieta-calc.workspace = true
 pikieta-crs.workspace = true
 pikieta-io.workspace = true
+pikieta-report.workspace = true
 wasm-bindgen = "0.2"

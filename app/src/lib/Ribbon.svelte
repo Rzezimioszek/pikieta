@@ -1,7 +1,15 @@
 <script lang="ts">
   import Icon from './Icon.svelte'
   import { CALC_GROUPS, CALCS } from './calcs'
-  import { exportPoints, exportReport, importPoints } from './files'
+  import {
+    exportPoints,
+    exportReport,
+    importPoints,
+    openProjectFile,
+    printReport,
+    projectFile,
+    saveProjectFile,
+  } from './files.svelte'
   import type { IconName } from './icons'
   import { BASEMAPS, CRS_LIST } from './map'
   import {
@@ -11,6 +19,7 @@
     showReport,
     startCalc,
     ui,
+    type Precision,
     type RibbonTab,
     type ViewMode,
   } from './project.svelte'
@@ -44,6 +53,13 @@
     }
   }
 
+  const PRECISION: [keyof Precision, string, number][] = [
+    ['coord', 'Współrzędne', 4],
+    ['length', 'Długości', 4],
+    ['angle', 'Kąty [g]', 6],
+    ['area', 'Pola [m²]', 4],
+  ]
+
   function newProject() {
     const n = project.points.length + project.calcs.length + project.report.length
     if (n && !confirm('Zacząć nowy projekt? Punkty, obliczenia i raport zostaną usunięte.')) return
@@ -52,7 +68,13 @@
     project.report = []
     selection.clear()
     ui.active = null
+    projectFile.name = ''
     notify('Nowy projekt.')
+  }
+
+  async function doOpen() {
+    const pts = await openProjectFile()
+    if (pts?.length) onzoom(pts)
   }
 
   async function doImport() {
@@ -102,8 +124,12 @@
     <div class="body" role="tabpanel">
       {#if ui.ribbonTab === 'project'}
         <div class="group">
-          <div class="btns">{@render big('file', 'Nowy', newProject, { title: 'Nowy projekt' })}</div>
-          <span class="cap">Projekt</span>
+          <div class="btns">
+            {@render big('file', 'Nowy', newProject, { title: 'Nowy projekt' })}
+            {@render big('folder', 'Otwórz', doOpen, { title: 'Otwórz projekt z pliku (Ctrl+O)' })}
+            {@render big('save', 'Zapisz', saveProjectFile, { title: 'Zapisz projekt do pliku (Ctrl+S)' })}
+          </div>
+          <span class="cap">Projekt{projectFile.name ? `: ${projectFile.name}` : ''}</span>
         </div>
         <div class="group">
           <div class="btns">
@@ -125,12 +151,35 @@
         <div class="group">
           <div class="btns">
             {@render big('report', 'Pokaż', showReport, { title: 'Pokaż raport obliczeń' })}
-            {@render big('download', 'Eksportuj', () => exportReport(crsLabel), {
-              title: 'Eksportuj raport (TXT)',
+            {@render big('download', 'TXT', () => exportReport(crsLabel, 'txt'), {
+              title: 'Zapisz raport jako tekst',
+              disabled: project.report.length === 0,
+            })}
+            {@render big('download', 'HTML', () => exportReport(crsLabel, 'html'), {
+              title: 'Zapisz raport jako stronę HTML',
+              disabled: project.report.length === 0,
+            })}
+            {@render big('printer', 'Drukuj', () => printReport(crsLabel), {
+              title: 'Drukuj raport albo zapisz jako PDF',
               disabled: project.report.length === 0,
             })}
           </div>
           <span class="cap">Raport</span>
+        </div>
+        <div class="group">
+          <div class="btns precision">
+            {#each PRECISION as [key, label, max] (key)}
+              <label class="stack">
+                <span>{label}</span>
+                <select bind:value={project.precision[key]} aria-label={`Miejsca po przecinku: ${label}`}>
+                  {#each Array.from({ length: max + 1 }, (_, i) => i) as d (d)}
+                    <option value={d}>{d === 0 ? '1' : `0.${'0'.repeat(d - 1)}1`}</option>
+                  {/each}
+                </select>
+              </label>
+            {/each}
+          </div>
+          <span class="cap">Dokładność wyników (zaokrąglanie do parzystej)</span>
         </div>
       {:else if ui.ribbonTab === 'calc'}
         {#each CALC_GROUPS as g (g.label)}

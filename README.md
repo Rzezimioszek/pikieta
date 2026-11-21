@@ -2,7 +2,7 @@
 
 Otwarty kalkulator geodezyjny z mapą, pisany w Ruście. Działa w przeglądarce, na Windows, Linux i Androidzie z jednego kodu.
 
-Projekt jest na wczesnym etapie. Interfejs ma wstążkę z obliczeniami, listę otwartych i ostatnich obliczeń, mapę z ortofotomapą lub BDOT10k z Geoportalu (obok obliczeń albo podzieloną 50/50) i tabelę punktów w stylu tabeli atrybutów QGIS. Działa import i eksport wykazów TXT, siedem zadań obliczeniowych (część wsadowo, w tabelach) z raportem oraz przeliczenia między PL-2000, PL-1992 i UTM. Dalsze kroki opisuje [PLAN.md](PLAN.md).
+Projekt jest na wczesnym etapie. Interfejs ma wstążkę z obliczeniami, listę otwartych i ostatnich obliczeń, mapę z ortofotomapą lub BDOT10k z Geoportalu (obok obliczeń albo podzieloną 50/50) i tabelę punktów w stylu tabeli atrybutów QGIS. Projekt zapisuje się do pliku `.pikieta`, a raport do TXT, HTML lub PDF (przez druk). Działa import i eksport wykazów TXT, siedem zadań obliczeniowych (część wsadowo, w tabelach) z raportem oraz przeliczenia między PL-2000, PL-1992 i UTM. Dalsze kroki opisuje [PLAN.md](PLAN.md).
 
 ## Struktura
 
@@ -12,6 +12,7 @@ Projekt jest na wczesnym etapie. Interfejs ma wstążkę z obliczeniami, listę 
 | `crates/pikieta-calc` | obliczenia geodezyjne | MIT OR Apache-2.0 |
 | `crates/pikieta-crs` | układy PL-2000, PL-1992, UTM (Gauss-Krüger) | MIT OR Apache-2.0 |
 | `crates/pikieta-io` | tekstowe wykazy współrzędnych | MIT OR Apache-2.0 |
+| `crates/pikieta-report` | raport obliczeń: TXT i HTML do druku | MIT OR Apache-2.0 |
 | `crates/pikieta-gml` | odczyt i zapis GML (etap 3) | MIT OR Apache-2.0 |
 | `crates/pikieta-cli` | polecenie `pikieta` | MIT OR Apache-2.0 |
 | `crates/pikieta-wasm` | wiązania WebAssembly rdzenia | MIT OR Apache-2.0 |

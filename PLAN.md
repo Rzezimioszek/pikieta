@@ -94,7 +94,7 @@ Przeniesione na później:
 
 Poza zakresem etapu 1 były od początku: układ 1965, wysokości, wcięcie wstecz, transformacje Helmerta, ciągi.
 
-## Stan etapu 2
+## Stan etapu 2: zamknięty
 
 Zrobione:
 
@@ -113,14 +113,17 @@ Układ interfejsu (przebudowa 21.11.2026):
 - tabela punktów zadokowana pod mapą jak tabela atrybutów w QGIS: sortowanie, zmiana szerokości kolumn, zaznaczanie (Ctrl, Shift) wspólne z mapą, tryb edycji komórek, filtr zaznaczonych, przybliżanie, przewijanie wirtualne dużych zbiorów, zmiana wysokości panelu;
 - obliczenia wsadowe w tabelach (azymuty, biegunowe, rzutowanie, domiary, wierzchołki pola) z nawigacją Enter/strzałki i wskazywaniem punktów kliknięciem na mapie; szkic obliczenia na mapie.
 
-Do zamknięcia etapu:
+Domknięcie etapu (21.11.2026):
 
-- zapis plików w aplikacji desktopowej i na Androidzie przez okna systemowe (teraz eksport działa jak pobieranie w przeglądarce i nie był sprawdzany w Tauri);
-- reguły zaokrągleń i formatowania wyników w `pikieta-core` (teraz formatuje interfejs, stałą liczbą miejsc);
-- składanie raportu w rdzeniu (`pikieta-report`) zamiast w interfejsie, eksport do HTML/PDF;
-- zapis i odczyt projektu do pliku;
-- zmiana kolejności wierszy w tabelach obliczeń (np. wierzchołków pola) przeciąganiem;
-- sprawdzenie nowego układu na fizycznym telefonie i w oknie Tauri.
+- zaokrąglanie w `pikieta-core` regułą „do parzystej” na zapisie dziesiętnym (12,345 → 12,34; 12,355 → 12,36); dokładność współrzędnych, długości, kątów i pól ustawiana w projekcie; hektary zawsze 0,0001 ha; ten sam sposób zaokrąglania w interfejsie, raporcie i eksporcie TXT;
+- crate `pikieta-report`: raport jako dane (parametry, tabela, wyniki, uwagi) składany w Ruście do TXT i do HTML przygotowanego do druku na A4; w aplikacji podgląd, zapis TXT/HTML i druk z zapisem do PDF; stare wpisy raportu przechodzą jako tekst;
+- zapis i odczyt projektu do pliku `.pikieta` (JSON: układ, punkty, obliczenia, raport, dokładność), skróty Ctrl+S i Ctrl+O;
+- okna systemowe: w Tauri wtyczki `dialog` i `fs` z dostępem tylko do plików wskazanych w oknie; w przeglądarkach Chromium okno zapisu File System Access; w pozostałych pobieranie;
+- zmiana kolejności wierszy w tabelach obliczeń przeciąganiem za kolumnę numerów (mysz i dotyk) oraz Alt+↑/↓;
+- ostrzeżenie o samoprzecinającym się wieloboku w obliczeniu pola i w raporcie;
+- okno Tauri na Windows sprawdzone przez zdalne debugowanie WebView2: interfejs i rdzeń działają, odczyt pliku spoza wskazanych jest blokowany.
+
+Niesprawdzone, przeniesione na etap 5 (Android): systemowe okna zapisu i odczytu na Androidzie oraz w ręcznie obsługiwanym oknie Tauri (testy zrobione skryptem nie klikają w natywne okna), układ na fizycznym telefonie.
 
 ## Ryzyka
 

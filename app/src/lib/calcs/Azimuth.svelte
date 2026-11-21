@@ -2,11 +2,11 @@
   import DataTable from '../DataTable.svelte'
   import Icon from '../Icon.svelte'
   import type { AzimuthData } from '../calcs'
-  import { azimuthDistance, lineReduction, type Pt } from '../core'
+  import { azimuthDistance, fmt, lineReduction, type Pt } from '../core'
   import type { Sketch } from '../map'
   import { addReport, findPoint } from '../project.svelte'
   import type { Column } from '../table'
-  import { f3, f4, isBlank, keepTrailing, tableLines } from './util'
+  import { fa, fl, isBlank, keepTrailing, moveRow, reportTable } from './util'
 
   interface Props {
     data: AzimuthData
@@ -57,20 +57,22 @@
   const columns: Column<Item>[] = [
     { key: 'from', label: 'Od', width: 84, edit: 'point', value: (i) => i.src.from, set: edit('from') },
     { key: 'to', label: 'Do', width: 84, edit: 'point', value: (i) => i.src.to, set: edit('to') },
-    { key: 'az', label: 'Azymut [g]', width: 104, align: 'right', value: (i) => opt(i.az, f4) },
-    { key: 'dist', label: 'Długość [m]', width: 104, align: 'right', value: (i) => opt(i.dist, f3) },
-    { key: 'ell', label: 'Na elipsoidzie [m]', width: 132, align: 'right', value: (i) => opt(i.ell, f3) },
-    { key: 'scale', label: 'Skala', width: 104, align: 'right', value: (i) => opt(i.scale, (n) => n.toFixed(8)) },
+    { key: 'az', label: 'Azymut [g]', width: 104, align: 'right', value: (i) => opt(i.az, fa) },
+    { key: 'dist', label: 'Długość [m]', width: 104, align: 'right', value: (i) => opt(i.dist, fl) },
+    { key: 'ell', label: 'Na elipsoidzie [m]', width: 132, align: 'right', value: (i) => opt(i.ell, fl) },
+    { key: 'scale', label: 'Skala', width: 104, align: 'right', value: (i) => opt(i.scale, (n) => fmt(n, 8)) },
     { key: 'status', label: 'Uwagi', width: 150, value: (i) => i.status, tone: (i) => i.tone },
   ]
 
   function save() {
-    addReport(`${title} (${crsLabel})`, [
-      ...tableLines(
-        ['Od → Do', 'Azymut [g]', 'Długość [m]', 'Na elipsoidzie [m]'],
-        done.map((i) => [`${i.a!.id} → ${i.b!.id}`, f4(i.az!), f3(i.dist!), opt(i.ell, f3)]),
+    addReport({
+      title: `${title} (${crsLabel})`,
+      table: reportTable(
+        ['Od', 'Do', 'Azymut [g]', 'Długość [m]', 'Na elipsoidzie [m]', 'Skala'],
+        done.map((i) => [i.a!.id, i.b!.id, fa(i.az!), fl(i.dist!), opt(i.ell, fl), opt(i.scale, (n) => fmt(n, 8))]),
+        2,
       ),
-    ])
+    })
   }
 </script>
 
@@ -84,6 +86,8 @@
     editing
     live
     canDelete={(i) => !isBlank(i.src)}
+    canMove={(i) => !isBlank(i.src)}
+    onmove={(from, to) => moveRow(data.rows, from, to, empty)}
     ondelete={(_, i) => {
       data.rows.splice(i, 1)
       keepTrailing(data.rows, empty)

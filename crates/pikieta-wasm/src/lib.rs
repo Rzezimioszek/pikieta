@@ -232,3 +232,21 @@ pub fn write_points(
         .collect();
     pikieta_io::write_points(&points, column_order(yx), decimals)
 }
+
+/// Zaokrągla regułą „do parzystej” i zwraca zapis z kropką dziesiętną.
+#[wasm_bindgen]
+pub fn fmt(value: f64, decimals: usize) -> String {
+    pikieta_core::round_half_even(value, decimals)
+}
+
+/// Składa raport z danych w JSON. `format` to `txt` albo `html`.
+#[wasm_bindgen]
+pub fn render_report(json: &str, format: &str) -> Result<String, JsError> {
+    let report = pikieta_report::from_json(json).map_err(|e| JsError::new(&e))?;
+    let generator = format!("Pikieta {}", env!("CARGO_PKG_VERSION"));
+    match format {
+        "txt" => Ok(pikieta_report::to_text(&report)),
+        "html" => Ok(pikieta_report::to_html(&report, &generator)),
+        _ => Err(JsError::new("nieznany format raportu")),
+    }
+}
