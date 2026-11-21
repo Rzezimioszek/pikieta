@@ -103,7 +103,15 @@ Zrobione:
 - punkty na mapie z numerami, wskazywanie punktów kliknięciem, przeliczanie całego projektu przy zmianie układu;
 - siedem zadań na punktach z projektu: azymut i długość, metoda biegunowa, rzutowanie na linię, punkt z domiarów, wcięcie liniowe, przecięcie prostych, pole ze współrzędnych;
 - raport obliczeń z eksportem do TXT;
-- projekt (układ, punkty, raport) zapamiętywany w pamięci przeglądarki.
+- projekt (układ, punkty, obliczenia, raport) zapamiętywany w pamięci przeglądarki.
+
+Układ interfejsu (przebudowa 21.11.2026):
+
+- wstążka u góry z kartami Projekt, Obliczenia, Mapa, Widok; zwijana;
+- lista obliczeń po lewej jak lista rozmów w czacie: „Nowe obliczenie”, otwarte, historia pogrupowana po dniach, wyszukiwanie, zmiana nazwy, zamykanie i usuwanie;
+- panel otwartego narzędzia obok mapy; przełącznik w rogu zmienia tryb: mapa z panelem, podział 50/50, obliczenia na pełnym ekranie; na telefonie podział jest pionowy, a lista wysuwa się jako szuflada;
+- tabela punktów zadokowana pod mapą jak tabela atrybutów w QGIS: sortowanie, zmiana szerokości kolumn, zaznaczanie (Ctrl, Shift) wspólne z mapą, tryb edycji komórek, filtr zaznaczonych, przybliżanie, przewijanie wirtualne dużych zbiorów, zmiana wysokości panelu;
+- obliczenia wsadowe w tabelach (azymuty, biegunowe, rzutowanie, domiary, wierzchołki pola) z nawigacją Enter/strzałki i wskazywaniem punktów kliknięciem na mapie; szkic obliczenia na mapie.
 
 Do zamknięcia etapu:
 
@@ -111,8 +119,8 @@ Do zamknięcia etapu:
 - reguły zaokrągleń i formatowania wyników w `pikieta-core` (teraz formatuje interfejs, stałą liczbą miejsc);
 - składanie raportu w rdzeniu (`pikieta-report`) zamiast w interfejsie, eksport do HTML/PDF;
 - zapis i odczyt projektu do pliku;
-- edycja istniejącego punktu w tabeli;
-- wygodniejszy układ na telefonie (panel zajmuje ponad połowę ekranu).
+- zmiana kolejności wierszy w tabelach obliczeń (np. wierzchołków pola) przeciąganiem;
+- sprawdzenie nowego układu na fizycznym telefonie i w oknie Tauri.
 
 ## Ryzyka
 

@@ -84,24 +84,24 @@ export interface Sketch {
   paths: GeoPoint[][]
   /** Pierwsza łamana jest wielobokiem. */
   closed?: boolean
-  result?: GeoPoint | null
+  /** Punkty wynikowe, jeszcze nie dodane do projektu. */
+  results?: (GeoPoint & { label?: string })[]
 }
 
 export interface MapHandle {
   setCrs(code: string): void
   /** Odrzuca obietnicę, gdy podkładu nie da się wczytać; poprzedni podkład zostaje. */
   setBasemap(id: BasemapId): Promise<void>
-  setPoints(points: MapPoint[], selectedId: string | null): void
+  setPoints(points: MapPoint[], selected: ReadonlySet<string>): void
   setSketch(sketch: Sketch): void
-  /** Dopasowuje widok do punktów; `rightInset` to szerokość zasłoniętego pasa po prawej. */
-  zoomTo(points: GeoPoint[], rightInset: number): void
+  zoomTo(points: GeoPoint[]): void
   destroy(): void
 }
 
 interface Callbacks {
   onPointer(p: GeoPoint | null): void
-  /** `pointId` to numer klikniętego punktu albo `null` dla pustego miejsca. */
-  onClick(p: GeoPoint, pointId: string | null): void
+  /** `pointId` to numer klikniętego punktu albo `null`; `additive` to kliknięcie z Ctrl lub Shift. */
+  onClick(p: GeoPoint, pointId: string | null, additive: boolean): void
 }
 
 // OpenLayers trzyma współrzędne jako [wschód, północ].
@@ -139,8 +139,7 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
   // Jeden styl na warstwę, z podmienianą etykietą: tani nawet dla tysięcy punktów.
   const pointStyle = labelled(4.5, '#38bdf8', '12px sans-serif')
   const selectedStyle = labelled(7, '#fbbf24', 'bold 13px sans-serif')
-  const resultStyle = labelled(7, '#f43f5e', 'bold 13px sans-serif')
-  resultStyle.getText()!.setText('nowy')
+  const resultStyle = labelled(6, '#f43f5e', 'bold 13px sans-serif')
 
   const pointSource = new VectorSource()
   const pointLayer = new VectorLayer({
@@ -155,13 +154,17 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
   const sketchSource = new VectorSource()
   const sketchLayer = new VectorLayer({
     source: sketchSource,
-    style: (f) =>
-      f.getGeometry()!.getType() === 'Point'
-        ? resultStyle
-        : new Style({
-            stroke: new Stroke({ color: '#fbbf24', width: 3 }),
-            fill: new Fill({ color: 'rgb(251 191 36 / 0.18)' }),
-          }),
+    style: (f) => {
+      if (f.getGeometry()!.getType() === 'Point') {
+        resultStyle.getText()!.setText((f.get('label') as string | undefined) ?? '')
+        return resultStyle
+      }
+      return sketchStyle
+    },
+  })
+  const sketchStyle = new Style({
+    stroke: new Stroke({ color: '#fbbf24', width: 2.5, lineDash: [8, 5] }),
+    fill: new Fill({ color: 'rgb(251 191 36 / 0.18)' }),
   })
 
   const map = new Map({
@@ -180,9 +183,13 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
       layerFilter: (l) => l === pointLayer,
       hitTolerance: 8,
     })
-    cb.onClick(toGeo(e.coordinate), hit ?? null)
+    const ev = e.originalEvent as MouseEvent
+    cb.onClick(toGeo(e.coordinate), hit ?? null, ev.ctrlKey || ev.metaKey || ev.shiftKey)
   })
   target.addEventListener('pointerleave', () => cb.onPointer(null))
+  // Panel obok mapy zmienia jej rozmiar (tryby widoku, tabela, lista obliczeń).
+  const resize = new ResizeObserver(() => map.updateSize())
+  resize.observe(target)
 
   return {
     setCrs(code) {
@@ -212,18 +219,18 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
         throw e
       }
     },
-    setPoints(points, selectedId) {
+    setPoints(points, selected) {
       pointSource.clear(true)
       pointSource.addFeatures(
         points.map((p) => {
           const f = new Feature(new Point(toOl(p)))
           f.set('pid', p.id, true)
-          f.set('selected', p.id === selectedId, true)
+          f.set('selected', selected.has(p.id), true)
           return f
         }),
       )
     },
-    setSketch({ paths, closed, result }) {
+    setSketch({ paths, closed, results }) {
       sketchSource.clear(true)
       paths.forEach((path, i) => {
         const coords = path.map(toOl)
@@ -233,19 +240,24 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
           sketchSource.addFeature(new Feature(new LineString(coords)))
         }
       })
-      if (result) sketchSource.addFeature(new Feature(new Point(toOl(result))))
+      for (const r of results ?? []) {
+        const f = new Feature(new Point(toOl(r)))
+        f.set('label', r.label ?? '', true)
+        sketchSource.addFeature(f)
+      }
     },
-    zoomTo(points, rightInset) {
+    zoomTo(points) {
       if (points.length === 0) return
       const view = map.getView()
       const maxZoom = view.getZoomForResolution(0.25)
       view.fit(boundingExtent(points.map(toOl)), {
-        padding: [70, 70 + rightInset, 70, 70],
+        padding: [60, 60, 60, 60],
         maxZoom,
         duration: 300,
       })
     },
     destroy() {
+      resize.disconnect()
       map.setTarget(undefined)
     },
   }
