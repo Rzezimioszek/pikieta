@@ -2,7 +2,8 @@ import 'ol/ol.css'
 import Feature from 'ol/Feature'
 import Map from 'ol/Map'
 import View from 'ol/View'
-import { LineString, Point } from 'ol/geom'
+import { boundingExtent } from 'ol/extent'
+import { LineString, Point, Polygon } from 'ol/geom'
 import ImageLayer from 'ol/layer/Image'
 import VectorLayer from 'ol/layer/Vector'
 import { transform } from 'ol/proj'
@@ -74,42 +75,58 @@ async function bdotSource(): Promise<ImageWMS> {
   )
 }
 
+export interface MapPoint extends GeoPoint {
+  id: string
+}
+
+/** Szkic bieżącego zadania: łamane przez punkty wejściowe i ewentualny punkt wynikowy. */
+export interface Sketch {
+  paths: GeoPoint[][]
+  /** Pierwsza łamana jest wielobokiem. */
+  closed?: boolean
+  result?: GeoPoint | null
+}
+
 export interface MapHandle {
   setCrs(code: string): void
   /** Odrzuca obietnicę, gdy podkładu nie da się wczytać; poprzedni podkład zostaje. */
   setBasemap(id: BasemapId): Promise<void>
-  setSegment(a: GeoPoint | null, b: GeoPoint | null): void
+  setPoints(points: MapPoint[], selectedId: string | null): void
+  setSketch(sketch: Sketch): void
+  /** Dopasowuje widok do punktów; `rightInset` to szerokość zasłoniętego pasa po prawej. */
+  zoomTo(points: GeoPoint[], rightInset: number): void
   destroy(): void
 }
 
 interface Callbacks {
   onPointer(p: GeoPoint | null): void
-  onClick(p: GeoPoint): void
+  /** `pointId` to numer klikniętego punktu albo `null` dla pustego miejsca. */
+  onClick(p: GeoPoint, pointId: string | null): void
 }
 
 // OpenLayers trzyma współrzędne jako [wschód, północ].
 const toGeo = (c: number[]): GeoPoint => ({ x: c[1], y: c[0] })
 const toOl = (p: GeoPoint): number[] => [p.y, p.x]
 
-function pointStyle(label: string): Style {
+const HALO = new Stroke({ color: '#111', width: 3 })
+
+function labelled(radius: number, color: string, font: string): Style {
   return new Style({
     image: new Circle({
-      radius: 6,
-      fill: new Fill({ color: '#fbbf24' }),
+      radius,
+      fill: new Fill({ color }),
       stroke: new Stroke({ color: '#111', width: 2 }),
     }),
     text: new Text({
-      text: label,
-      offsetY: -16,
-      font: 'bold 14px sans-serif',
+      offsetY: -(radius + 9),
+      font,
       fill: new Fill({ color: '#fff' }),
-      stroke: new Stroke({ color: '#111', width: 3 }),
+      stroke: HALO,
     }),
   })
 }
 
 export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapHandle {
-  const segment = new VectorSource()
   const orto = wmsSource(
     ORTO_WMS,
     { LAYERS: 'Raster', FORMAT: 'image/jpeg' },
@@ -118,15 +135,38 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
   const basemap = new ImageLayer({ source: orto })
   let bdot: Promise<ImageWMS> | undefined
   let wanted: BasemapId = 'orto'
+
+  // Jeden styl na warstwę, z podmienianą etykietą: tani nawet dla tysięcy punktów.
+  const pointStyle = labelled(4.5, '#38bdf8', '12px sans-serif')
+  const selectedStyle = labelled(7, '#fbbf24', 'bold 13px sans-serif')
+  const resultStyle = labelled(7, '#f43f5e', 'bold 13px sans-serif')
+  resultStyle.getText()!.setText('nowy')
+
+  const pointSource = new VectorSource()
+  const pointLayer = new VectorLayer({
+    source: pointSource,
+    declutter: true,
+    style: (f) => {
+      const style = f.get('selected') ? selectedStyle : pointStyle
+      style.getText()!.setText(f.get('pid') as string)
+      return style
+    },
+  })
+  const sketchSource = new VectorSource()
+  const sketchLayer = new VectorLayer({
+    source: sketchSource,
+    style: (f) =>
+      f.getGeometry()!.getType() === 'Point'
+        ? resultStyle
+        : new Style({
+            stroke: new Stroke({ color: '#fbbf24', width: 3 }),
+            fill: new Fill({ color: 'rgb(251 191 36 / 0.18)' }),
+          }),
+  })
+
   const map = new Map({
     target,
-    layers: [
-      basemap,
-      new VectorLayer({
-        source: segment,
-        style: new Style({ stroke: new Stroke({ color: '#fbbf24', width: 3 }) }),
-      }),
-    ],
+    layers: [basemap, sketchLayer, pointLayer],
     view: new View({
       projection: crs,
       center: transform([21.0122, 52.2297], 'EPSG:4326', crs),
@@ -135,7 +175,13 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
   })
 
   map.on('pointermove', (e) => cb.onPointer(toGeo(e.coordinate)))
-  map.on('singleclick', (e) => cb.onClick(toGeo(e.coordinate)))
+  map.on('singleclick', (e) => {
+    const hit = map.forEachFeatureAtPixel(e.pixel, (f) => f.get('pid') as string | undefined, {
+      layerFilter: (l) => l === pointLayer,
+      hitTolerance: 8,
+    })
+    cb.onClick(toGeo(e.coordinate), hit ?? null)
+  })
   target.addEventListener('pointerleave', () => cb.onPointer(null))
 
   return {
@@ -166,15 +212,38 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
         throw e
       }
     },
-    setSegment(a, b) {
-      segment.clear()
-      for (const [p, label] of [[a, 'A'], [b, 'B']] as const) {
-        if (!p) continue
-        const f = new Feature(new Point(toOl(p)))
-        f.setStyle(pointStyle(label))
-        segment.addFeature(f)
-      }
-      if (a && b) segment.addFeature(new Feature(new LineString([toOl(a), toOl(b)])))
+    setPoints(points, selectedId) {
+      pointSource.clear(true)
+      pointSource.addFeatures(
+        points.map((p) => {
+          const f = new Feature(new Point(toOl(p)))
+          f.set('pid', p.id, true)
+          f.set('selected', p.id === selectedId, true)
+          return f
+        }),
+      )
+    },
+    setSketch({ paths, closed, result }) {
+      sketchSource.clear(true)
+      paths.forEach((path, i) => {
+        const coords = path.map(toOl)
+        if (closed && i === 0 && coords.length >= 3) {
+          sketchSource.addFeature(new Feature(new Polygon([[...coords, coords[0]]])))
+        } else if (coords.length >= 2) {
+          sketchSource.addFeature(new Feature(new LineString(coords)))
+        }
+      })
+      if (result) sketchSource.addFeature(new Feature(new Point(toOl(result))))
+    },
+    zoomTo(points, rightInset) {
+      if (points.length === 0) return
+      const view = map.getView()
+      const maxZoom = view.getZoomForResolution(0.25)
+      view.fit(boundingExtent(points.map(toOl)), {
+        padding: [70, 70 + rightInset, 70, 70],
+        maxZoom,
+        duration: 300,
+      })
     },
     destroy() {
       map.setTarget(undefined)

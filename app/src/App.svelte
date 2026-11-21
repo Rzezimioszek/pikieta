@@ -1,68 +1,67 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { BASEMAPS, CRS_LIST, createMap, type BasemapId, type GeoPoint, type MapHandle } from './lib/map'
-  import init, { azimuth_distance, core_version, line_reduction, to_geodetic, transform } from './lib/wasm/pikieta.js'
+  import Calc from './lib/Calc.svelte'
+  import Points from './lib/Points.svelte'
+  import Report from './lib/Report.svelte'
+  import { coreReady, epsgOf, toGeodetic, transformXY, type XY } from './lib/core'
+  import { BASEMAPS, CRS_LIST, createMap, type BasemapId, type MapHandle, type Sketch } from './lib/map'
+  import { addPoints, nextId, project, saveProject } from './lib/project.svelte'
+
+  type Tab = 'points' | 'calc' | 'report'
+  const TABS: [Tab, string][] = [
+    ['points', 'Punkty'],
+    ['calc', 'Obliczenia'],
+    ['report', 'Raport'],
+  ]
 
   let mapEl = $state<HTMLDivElement>()
+  let panelEl = $state<HTMLElement>()
+  let calc = $state<ReturnType<typeof Calc>>()
   let handle = $state.raw<MapHandle>()
   let coreVersion = $state('')
-  let crs = $state('EPSG:2178')
-  let shownCrs = 'EPSG:2178'
+  let shownCrs = project.crs
   let basemap = $state<BasemapId>('orto')
   let basemapError = $state('')
-  let cursor = $state<GeoPoint | null>(null)
-  let fields = $state({ xa: '', ya: '', xb: '', yb: '' })
-  let nextClick = $state<'a' | 'b'>('a')
+  let cursor = $state<XY | null>(null)
+  let tab = $state<Tab>('points')
+  let selectedId = $state<string | null>(null)
+  let addByClick = $state(false)
+  let sketch = $state.raw<Sketch>({ paths: [] })
 
-  function parse(s: string): number | null {
-    const t = s.trim().replace(',', '.')
-    const v = Number(t)
-    return t !== '' && Number.isFinite(v) ? v : null
-  }
+  const crsLabel = $derived(CRS_LIST.find((c) => c.code === project.crs)?.label ?? project.crs)
 
-  function point(xs: string, ys: string): GeoPoint | null {
-    const x = parse(xs)
-    const y = parse(ys)
-    return x === null || y === null ? null : { x, y }
-  }
+  const cursorGeo = $derived(coreVersion && cursor ? toGeodetic(epsgOf(project.crs), cursor) : null)
 
-  const a = $derived(point(fields.xa, fields.ya))
-  const b = $derived(point(fields.xb, fields.yb))
-
-  const result = $derived.by(() => {
-    if (!coreVersion || !a || !b) return null
-    const r = azimuth_distance(a.x, a.y, b.x, b.y)
-    if (!r) return null
-    const out = { azimuth: r.azimuth_grad, distance: r.distance }
-    r.free()
-    const red = line_reduction(epsg(crs), a.x, a.y, b.x, b.y)
-    return { ...out, scale: red?.[0], ellipsoidal: red?.[1], convergence: red?.[2] }
-  })
-
-  const epsg = (code: string) => Number(code.replace('EPSG:', ''))
-
-  const cursorGeo = $derived.by(() => {
-    if (!coreVersion || !cursor) return null
-    const g = to_geodetic(epsg(crs), cursor.x, cursor.y)
-    return g ? { lat: g[0], lon: g[1] } : null
-  })
-
-  /** Po zmianie układu przelicza wpisane punkty, żeby zostały w tym samym miejscu w terenie. */
+  /** Po zmianie układu przelicza wszystkie punkty, żeby zostały w tym samym miejscu w terenie. */
   function onCrsChange() {
-    const [from, to] = [epsg(shownCrs), epsg(crs)]
-    shownCrs = crs
+    const [from, to] = [epsgOf(shownCrs), epsgOf(project.crs)]
+    shownCrs = project.crs
     if (!coreVersion) return
-    for (const [kx, ky] of [['xa', 'ya'], ['xb', 'yb']] as const) {
-      const p = point(fields[kx], fields[ky])
-      const t = p && transform(from, to, p.x, p.y)
-      if (!t) continue
-      fields[kx] = t[0].toFixed(2)
-      fields[ky] = t[1].toFixed(2)
+    project.points = project.points.map((p) => ({ ...p, ...(transformXY(from, to, p) ?? p) }))
+  }
+
+  /** Na szerokim ekranie panel zasłania prawy pas mapy; na telefonie leży pod mapą. */
+  function zoomTo(points: XY[]) {
+    const wide = window.matchMedia('(min-width: 701px)').matches
+    handle?.zoomTo(points, wide ? (panelEl?.offsetWidth ?? 0) + 16 : 0)
+  }
+
+  function onMapClick(p: XY, pointId: string | null) {
+    if (pointId !== null) {
+      if (tab === 'calc') calc?.pick(pointId)
+      else selectedId = pointId
+      return
+    }
+    if (tab === 'points' && addByClick) {
+      const id = nextId()
+      addPoints([{ id, x: p.x, y: p.y, h: null, code: '' }])
+      selectedId = id
     }
   }
 
-  $effect(() => handle?.setSegment(a, b))
-  $effect(() => handle?.setCrs(crs))
+  $effect(() => handle?.setPoints(project.points, selectedId))
+  $effect(() => handle?.setSketch(tab === 'calc' ? sketch : { paths: [] }))
+  $effect(() => handle?.setCrs(project.crs))
   $effect(() => {
     const id = basemap
     handle?.setBasemap(id).catch(() => {
@@ -71,25 +70,16 @@
       basemap = 'orto'
     })
   })
+  $effect(saveProject)
 
   onMount(() => {
-    init().then(() => (coreVersion = core_version()))
-    const h = createMap(mapEl!, crs, {
+    coreReady.then((v) => (coreVersion = v))
+    const h = createMap(mapEl!, project.crs, {
       onPointer: (p) => (cursor = p),
-      onClick: (p) => {
-        const [x, y] = [p.x.toFixed(2), p.y.toFixed(2)]
-        if (nextClick === 'a') {
-          fields.xa = x
-          fields.ya = y
-          nextClick = 'b'
-        } else {
-          fields.xb = x
-          fields.yb = y
-          nextClick = 'a'
-        }
-      },
+      onClick: onMapClick,
     })
     handle = h
+    if (project.points.length) setTimeout(() => zoomTo(project.points))
     return () => h.destroy()
   })
 </script>
@@ -97,7 +87,7 @@
 <main>
   <div class="map" bind:this={mapEl}></div>
 
-  <aside class="glass">
+  <aside class="glass" bind:this={panelEl}>
     <header>
       <h1>Pikieta</h1>
       <span class="badge">{coreVersion ? `rdzeń ${coreVersion}` : 'ładowanie…'}</span>
@@ -106,7 +96,7 @@
     <div class="selects">
       <label>
         <span>Układ</span>
-        <select bind:value={crs} onchange={onCrsChange}>
+        <select bind:value={project.crs} onchange={onCrsChange}>
           {#each CRS_LIST as c (c.code)}
             <option value={c.code}>{c.label}</option>
           {/each}
@@ -122,38 +112,27 @@
         </select>
       </label>
     </div>
-    {#if basemapError}<p class="hint" role="alert">{basemapError}</p>{/if}
+    {#if basemapError}<p class="error" role="alert">{basemapError}</p>{/if}
 
-    <section>
-      <h2>Azymut i długość</h2>
-      <p class="hint">
-        Wpisz współrzędne albo kliknij na mapie. Następny punkt:
-        <span class="next">{nextClick.toUpperCase()}</span>
-      </p>
+    <div class="tabs" role="tablist">
+      {#each TABS as [id, label] (id)}
+        <button role="tab" aria-selected={tab === id} class:on={tab === id} onclick={() => (tab = id)}>
+          {label}
+          {#if id === 'points' && project.points.length}<span class="count">{project.points.length}</span>{/if}
+          {#if id === 'report' && project.report.length}<span class="count">{project.report.length}</span>{/if}
+        </button>
+      {/each}
+    </div>
 
-      <div class="grid">
-        <span></span><span class="col">X (północ)</span><span class="col">Y (wschód)</span>
-        <strong>A</strong>
-        <input aria-label="X punktu A" inputmode="decimal" bind:value={fields.xa} />
-        <input aria-label="Y punktu A" inputmode="decimal" bind:value={fields.ya} />
-        <strong>B</strong>
-        <input aria-label="X punktu B" inputmode="decimal" bind:value={fields.xb} />
-        <input aria-label="Y punktu B" inputmode="decimal" bind:value={fields.yb} />
-      </div>
+    <section role="tabpanel">
+      {#if tab === 'points'}
+        <Points bind:selectedId bind:addByClick onzoom={zoomTo} />
+      {:else if tab === 'calc'}
+        <Calc bind:this={calc} ready={!!coreVersion} {crsLabel} onsketch={(s) => (sketch = s)} />
+      {:else}
+        <Report {crsLabel} />
+      {/if}
     </section>
-
-    <dl class="results">
-      <dt>Azymut A→B</dt>
-      <dd>{result ? `${result.azimuth.toFixed(4)} g` : '—'}</dd>
-      <dt>Długość</dt>
-      <dd>{result ? `${result.distance.toFixed(3)} m` : '—'}</dd>
-      <dt>Skala odcinka</dt>
-      <dd>{result?.scale !== undefined ? result.scale.toFixed(8) : '—'}</dd>
-      <dt>Długość na elipsoidzie</dt>
-      <dd>{result?.ellipsoidal !== undefined ? `${result.ellipsoidal.toFixed(3)} m` : '—'}</dd>
-      <dt>Zbieżność południków w A</dt>
-      <dd>{result?.convergence !== undefined ? `${result.convergence.toFixed(4)} g` : '—'}</dd>
-    </dl>
   </aside>
 
   {#if cursor}
@@ -171,35 +150,9 @@
 
 <style>
   main {
-    --glass-bg: rgb(255 255 255 / 0.58);
-    --glass-edge: rgb(255 255 255 / 0.7);
-    --glass-shadow: rgb(15 23 42 / 0.28);
-    --field-bg: rgb(255 255 255 / 0.5);
-    --field-edge: rgb(15 23 42 / 0.14);
-    --menu-bg: #ffffff;
-    --ink: #0f172a;
-    --ink-soft: rgb(15 23 42 / 0.66);
-    --accent: #b45309;
-    --focus: #2563eb;
-
     position: relative;
     height: 100dvh;
     overflow: hidden;
-    color: var(--ink);
-  }
-  @media (prefers-color-scheme: dark) {
-    main {
-      --glass-bg: rgb(17 24 39 / 0.42);
-      --glass-edge: rgb(255 255 255 / 0.22);
-      --glass-shadow: rgb(0 0 0 / 0.5);
-      --field-bg: rgb(255 255 255 / 0.09);
-      --field-edge: rgb(255 255 255 / 0.16);
-      --menu-bg: #1f2937;
-      --ink: #f8fafc;
-      --ink-soft: rgb(248 250 252 / 0.7);
-      --accent: #fbbf24;
-      --focus: #93c5fd;
-    }
   }
 
   .map {
@@ -238,13 +191,13 @@
   aside {
     top: 16px;
     right: 16px;
-    width: 348px;
+    width: 372px;
     max-height: calc(100dvh - 32px);
     padding: 20px;
     border-radius: 28px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
     overflow-y: auto;
     scrollbar-width: thin;
   }
@@ -262,10 +215,6 @@
     font-size: 1.35rem;
     font-weight: 700;
     letter-spacing: -0.01em;
-  }
-  h2 {
-    font-size: 1rem;
-    font-weight: 650;
   }
   .badge {
     padding: 4px 10px;
@@ -289,92 +238,42 @@
     font-size: 0.9rem;
     color: var(--ink-soft);
   }
-
-  section {
-    display: grid;
-    gap: 10px;
-  }
-  .hint {
-    font-size: 0.82rem;
-    line-height: 1.4;
-    color: var(--ink-soft);
-  }
-  .next {
-    display: inline-block;
-    min-width: 1.5em;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: var(--accent);
-    color: #fff;
-    font-weight: 700;
-    text-align: center;
-  }
-  @media (prefers-color-scheme: dark) {
-    .next {
-      color: #111827;
-    }
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: auto 1fr 1fr;
-    gap: 8px;
-    align-items: center;
-  }
-  .col {
-    font-size: 0.75rem;
-    color: var(--ink-soft);
-    padding-left: 4px;
-  }
-
-  input,
-  select {
-    font: inherit;
-    color: inherit;
-    min-width: 0;
-    width: 100%;
-    padding: 9px 12px;
-    border-radius: 14px;
-    border: 1px solid var(--field-edge);
-    background: var(--field-bg);
-    box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.08);
-    transition:
-      border-color 0.15s,
-      box-shadow 0.15s;
-  }
-  input {
-    font-variant-numeric: tabular-nums;
-  }
-  /* Rozwijana lista jest rysowana przez system i nie dziedziczy szkła,
-     więc pozycje dostają własne, nieprzezroczyste tło. */
-  option {
-    background-color: var(--menu-bg);
+  .selects select {
     color: var(--ink);
   }
-  input:focus-visible,
-  select:focus-visible {
-    outline: none;
-    border-color: var(--focus);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 35%, transparent);
-  }
 
-  .results {
+  .tabs {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 9px 12px;
-    padding: 14px 16px;
-    border-radius: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 4px;
+    border-radius: 18px;
     background: var(--field-bg);
     border: 1px solid var(--field-edge);
-    font-size: 0.9rem;
   }
-  dt {
+  .tabs button {
+    padding: 7px 6px;
+    border: none;
+    background: transparent;
+    font-size: 0.88rem;
     color: var(--ink-soft);
   }
-  dd {
-    text-align: right;
-    font-weight: 650;
-    font-variant-numeric: tabular-nums;
+  .tabs button.on {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .count {
+    margin-left: 4px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, currentColor 18%, transparent);
+    font-size: 0.72rem;
+  }
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
   .cursor {
@@ -415,6 +314,8 @@
     width: 34px;
     height: 34px;
     margin: 0;
+    padding: 0;
+    border: none;
     border-radius: 14px;
     background: transparent;
     color: var(--ink);
@@ -436,6 +337,8 @@
     color: var(--ink);
   }
   .map :global(.ol-attribution button) {
+    padding: 0;
+    border: none;
     border-radius: 10px;
     background: transparent;
     color: var(--ink);
@@ -452,7 +355,7 @@
       right: 8px;
       bottom: 8px;
       width: auto;
-      max-height: 56dvh;
+      max-height: 58dvh;
       padding: 16px;
       border-radius: 26px;
       gap: 12px;
@@ -479,9 +382,6 @@
   }
 
   @media (prefers-reduced-transparency: reduce) {
-    main {
-      --glass-bg: Canvas;
-    }
     .glass,
     .map :global(.ol-zoom),
     .map :global(.ol-attribution) {

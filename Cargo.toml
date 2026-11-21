@@ -9,6 +9,7 @@ default-members = [
     "crates/pikieta-crs",
     "crates/pikieta-gml",
     "crates/pikieta-cli",
+    "crates/pikieta-io",
 ]
 
 [workspace.package]
@@ -20,6 +21,7 @@ license = "MIT OR Apache-2.0"
 pikieta-core = { path = "crates/pikieta-core", version = "0.1.0" }
 pikieta-calc = { path = "crates/pikieta-calc", version = "0.1.0" }
 pikieta-crs = { path = "crates/pikieta-crs", version = "0.1.0" }
+pikieta-io = { path = "crates/pikieta-io", version = "0.1.0" }
 
 [profile.release]
 lto = true

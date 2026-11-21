@@ -94,6 +94,26 @@ Przeniesione na później:
 
 Poza zakresem etapu 1 były od początku: układ 1965, wysokości, wcięcie wstecz, transformacje Helmerta, ciągi.
 
+## Stan etapu 2
+
+Zrobione:
+
+- `pikieta-io`: odczyt i zapis tekstowych wykazów współrzędnych (numer, X, Y, opcjonalnie H i kod; kolejność XY albo YX; separatory: spacje, tabulatory, średniki, przecinki; przecinek dziesiętny; nagłówek i komentarze);
+- tabela punktów: import i eksport TXT (także pliki w Windows-1250), ręczne dodawanie, dodawanie kliknięciem na mapie, wyszukiwanie, usuwanie;
+- punkty na mapie z numerami, wskazywanie punktów kliknięciem, przeliczanie całego projektu przy zmianie układu;
+- siedem zadań na punktach z projektu: azymut i długość, metoda biegunowa, rzutowanie na linię, punkt z domiarów, wcięcie liniowe, przecięcie prostych, pole ze współrzędnych;
+- raport obliczeń z eksportem do TXT;
+- projekt (układ, punkty, raport) zapamiętywany w pamięci przeglądarki.
+
+Do zamknięcia etapu:
+
+- zapis plików w aplikacji desktopowej i na Androidzie przez okna systemowe (teraz eksport działa jak pobieranie w przeglądarce i nie był sprawdzany w Tauri);
+- reguły zaokrągleń i formatowania wyników w `pikieta-core` (teraz formatuje interfejs, stałą liczbą miejsc);
+- składanie raportu w rdzeniu (`pikieta-report`) zamiast w interfejsie, eksport do HTML/PDF;
+- zapis i odczyt projektu do pliku;
+- edycja istniejącego punktu w tabeli;
+- wygodniejszy układ na telefonie (panel zajmuje ponad połowę ekranu).
+
 ## Ryzyka
 
 - **Zakres GML**: rozrośnie się bez twardych profili i prawdziwych plików testowych z ośrodków.

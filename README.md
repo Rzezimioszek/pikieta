@@ -2,7 +2,7 @@
 
 Otwarty kalkulator geodezyjny z mapą, pisany w Ruście. Działa w przeglądarce, na Windows, Linux i Androidzie z jednego kodu.
 
-Projekt jest na wczesnym etapie: działa mapa z ortofotomapą lub BDOT10k z Geoportalu, przeliczenia między PL-2000, PL-1992 i UTM oraz podstawowe zadania obliczeniowe w rdzeniu i wierszu poleceń. Dalsze kroki opisuje [PLAN.md](PLAN.md).
+Projekt jest na wczesnym etapie. Działa mapa z ortofotomapą lub BDOT10k z Geoportalu, tabela punktów z importem i eksportem TXT, siedem zadań obliczeniowych z raportem oraz przeliczenia między PL-2000, PL-1992 i UTM. Dalsze kroki opisuje [PLAN.md](PLAN.md).
 
 ## Struktura
 
@@ -11,6 +11,7 @@ Projekt jest na wczesnym etapie: działa mapa z ortofotomapą lub BDOT10k z Geop
 | `crates/pikieta-core` | typy podstawowe: punkty, kąty | MIT OR Apache-2.0 |
 | `crates/pikieta-calc` | obliczenia geodezyjne | MIT OR Apache-2.0 |
 | `crates/pikieta-crs` | układy PL-2000, PL-1992, UTM (Gauss-Krüger) | MIT OR Apache-2.0 |
+| `crates/pikieta-io` | tekstowe wykazy współrzędnych | MIT OR Apache-2.0 |
 | `crates/pikieta-gml` | odczyt i zapis GML (etap 3) | MIT OR Apache-2.0 |
 | `crates/pikieta-cli` | polecenie `pikieta` | MIT OR Apache-2.0 |
 | `crates/pikieta-wasm` | wiązania WebAssembly rdzenia | MIT OR Apache-2.0 |

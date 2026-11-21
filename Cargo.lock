@@ -2378,12 +2378,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pikieta-io"
+version = "0.1.0"
+
+[[package]]
 name = "pikieta-wasm"
 version = "0.1.0"
 dependencies = [
  "pikieta-calc",
  "pikieta-core",
  "pikieta-crs",
+ "pikieta-io",
  "wasm-bindgen",
 ]
 
