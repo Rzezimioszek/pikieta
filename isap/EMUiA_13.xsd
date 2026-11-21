@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--GUGiK 22.02.2024-->
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:emuia="urn:gugik:specyfikacje:gmlas:ewidencjamiejscowosciuliciadresow:1.0" xmlns:gml="http://www.opengis.net/gml/3.2" targetNamespace="urn:gugik:specyfikacje:gmlas:ewidencjamiejscowosciuliciadresow:1.0" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.3">
+	<import namespace="http://www.opengis.net/gml/3.2" schemaLocation="http://schemas.opengis.net/gml/3.2.1/gml.xsd"/>
+	<import namespace="http://www.isotc211.org/2005/gmd" schemaLocation="http://schemas.opengis.net/iso/19139/20070417/gmd/gmd.xsd"/>
+	<element name="AD_OgolnyObiekt" type="emuia:AD_OgolnyObiektType" substitutionGroup="gml:AbstractFeature"/>
+	<complexType name="AD_OgolnyObiektType">
+		<complexContent>
+			<extension base="gml:AbstractFeatureType">
+				<sequence>
+					<element name="idIIP">
+						<complexType>
+							<complexContent>
+								<extension base="gml:AbstractMemberType">
+									<sequence>
+										<element ref="emuia:AD_IdentyfikatorIIP"/>
+									</sequence>
+								</extension>
+							</complexContent>
+						</complexType>
+					</element>
+					<element name="poczatekWersjiObiektu" type="dateTime"/>
+					<element name="koniecWersjiObiektu" type="dateTime" minOccurs="0" maxOccurs="1"/>
+				</sequence>
+			</extension>
+		</complexContent>
+	</complexType>
+	<complexType name="AD_OgolnyObiektPropertyType">
+		<sequence minOccurs="0">
+			<element ref="emuia:AD_OgolnyObiekt"/>
+		</sequence>
+		<attributeGroup ref="gml:AssociationAttributeGroup"/>
+		<attributeGroup ref="gml:OwnershipAttributeGroup"/>
+	</complexType>
+	<element name="AD_IdentyfikatorIIP" type="emuia:AD_IdentyfikatorIIPType" substitutionGroup="gml:AbstractObject"/>
+	<complexType name="AD_IdentyfikatorIIPType">
+		<sequence>
+			<element name="lokalnyId" type="string">
+				<annotation>
+					<documentation>Identyfikator lokalny obiektu nadawany przez dostawcę zbioru danych, unikalny w przestrzeni nazw.</documentation>
+				</annotation>
+			</element>
+			<element name="przestrzenNazw" type="string">
+				<annotation>
+					<documentation>Przestrzeń nazw identyfikujaca zbiór danych, z którego pochodzi obiekt.</documentation>
+				</annotation>
+			</element>
+			<element name="wersjaId" type="dateTime" minOccurs="0" maxOccurs="1">
+				<annotation>
+					<documentation>Identyfikator wersji obiektu.</documentation>
+				</annotation>
+			</element>
+		</sequence>
+	</complexType>
+	<complexType name="AD_IdentyfikatorIIPPropertyType">
+		<sequence>
+			<element ref="emuia:AD_IdentyfikatorIIP"/>
+		</sequence>
+		<attributeGroup ref="gml:OwnershipAttributeGroup"/>
+	</complexType>
+	<element name="AD_Miejscowosc" type="emuia:AD_MiejscowoscType" substitutionGroup="emuia:AD_OgolnyObiekt"/>
+	<complexType name="AD_MiejscowoscType">
+		<complexContent>
+			<extension base="emuia:AD_OgolnyObiektType">
+				<sequence>
+					<element name="nazwa" type="string"/>
+					<element name="rodzaj" type="emuia:AD_RodzajMiejscowosciType"/>
+					<element name="identyfikatorSIMC" type="string"/>
+					<element name="identyfikatorPRNG" type="string"/>
+					<element name="georeferencja" type="gml:PointPropertyType"/>
+					<element name="TERYTGminy" type="string"/>
+					<element name="nazwaJezykMniejszosci" type="string" minOccurs="0" maxOccurs="1"/>
+					<element name="ulica1" type="emuia:AD_UlicaPlacPropertyType" minOccurs="0" maxOccurs="unbounded">
+						<annotation>
+							<appinfo>
+								<gml:reversePropertyName>emuia:miejsce</gml:reversePropertyName>
+							</appinfo>
+						</annotation>
+					</element>
+					<element name="adres1" type="emuia:AD_PunktAdresowyPropertyType" minOccurs="0" maxOccurs="unbounded">
+						<annotation>
+							<appinfo>
+								<gml:reversePropertyName>emuia:miejscowosc</gml:reversePropertyName>
+							</appinfo>
+						</annotation>
+					</element>
+				</sequence>
+			</extension>
+		</complexContent>
+	</complexType>
+	<complexType name="AD_MiejscowoscPropertyType">
+		<sequence minOccurs="0">
+			<element ref="emuia:AD_Miejscowosc"/>
+		</sequence>
+		<attributeGroup ref="gml:AssociationAttributeGroup"/>
+		<attributeGroup ref="gml:OwnershipAttributeGroup"/>
+	</complexType>
+	<element name="AD_UlicaPlac" type="emuia:AD_UlicaPlacType" substitutionGroup="emuia:AD_OgolnyObiekt"/>
+	<complexType name="AD_UlicaPlacType">
+		<complexContent>
+			<extension base="emuia:AD_OgolnyObiektType">
+				<sequence>
+					<element name="geometria" type="gml:GeometryPropertyType"/>
+					<element name="nazwaPelna" type="string">
+						<annotation>
+							<documentation>Nazwa zgodna z uchwała rady gminy.</documentation>
+						</annotation>
+					</element>
+					<element name="rodzaj" type="emuia:AD_RodzajObiektuType"/>
+					<element name="TERYTNazwa1" type="string">
+						<annotation>
+							<documentation>Część nazwy ulicy począwszy od słowa, które decyduje o nazwie ulicy w układzie alfabetycznym.</documentation>
+						</annotation>
+					</element>
+					<element name="TERYTNazwa2" type="string" minOccurs="0" maxOccurs="1">
+						<annotation>
+							<documentation>Pozostała część nazwy ulicy. W przypadku gdy pole TERYTNazwa2 nie jest puste, aby otrzymać nazwę ulicy w pełnym brzmieniu należy człony nazwy użyć w następującej kolejności: TERYTNazwa2, TERYTNazwa1.</documentation>
+						</annotation>
+					</element>
+					<element name="identyfikatorULIC" type="string" minOccurs="0" maxOccurs="1"/>
+					<element name="nazwaJezykMniejszosci" type="string" minOccurs="0" maxOccurs="1"/>
+					<element name="uchwala" type="emuia:AD_UchwalaPropertyType" minOccurs="0" maxOccurs="unbounded">
+						<annotation>
+							<documentation>Uchwała rady gminy o nadaniu nazwy ulicy lub placu.</documentation>
+						</annotation>
+					</element>
+					<element name="miejsce" type="emuia:AD_MiejscowoscPropertyType" maxOccurs="unbounded">
+						<annotation>
+							<appinfo>
+								<gml:reversePropertyName>emuia:ulica1</gml:reversePropertyName>
+							</appinfo>
+						</annotation>
+					</element>
+				</sequence>
+			</extension>
+		</complexContent>
+	</complexType>
+	<complexType name="AD_UlicaPlacPropertyType">
+		<sequence minOccurs="0">
+			<element ref="emuia:AD_UlicaPlac"/>
+		</sequence>
+		<attributeGroup ref="gml:AssociationAttributeGroup"/>
+		<attributeGroup ref="gml:OwnershipAttributeGroup"/>
+	</complexType>
+	<element name="AD_Uchwala" type="emuia:AD_UchwalaType" substitutionGroup="gml:AbstractFeature"/>
+	<complexType name="AD_UchwalaType">
+		<complexContent>
+			<extension base="gml:AbstractFeatureType">
+				<sequence>
+					<element name="numer" type="string"/>
+					<element name="data" type="date" minOccurs="0" maxOccurs="1"/>
+					<element name="opis" type="string" minOccurs="0" maxOccurs="1"/>
+					<element name="dokument" type="gmd:CI_OnlineResource_Type" minOccurs="0" maxOccurs="unbounded"/>
+				</sequence>
+			</extension>
+		</complexContent>
+	</complexType>
+	<complexType name="AD_UchwalaPropertyType">
+		<sequence minOccurs="0">
+			<element ref="emuia:AD_Uchwala"/>
+		</sequence>
+		<attributeGroup ref="gml:AssociationAttributeGroup"/>
+		<attributeGroup ref="gml:OwnershipAttributeGroup"/>
+	</complexType>
+	<element name="AD_PunktAdresowy" type="emuia:AD_PunktAdresowyType" substitutionGroup="emuia:AD_OgolnyObiekt"/>
+	<complexType name="AD_PunktAdresowyType">
+		<complexContent>
+			<extension base="emuia:AD_OgolnyObiektType">
+				<sequence>
+					<element name="numerPorzadkowy" type="string"/>
+					<element name="georeferencja" type="gml:PointPropertyType"/>
+					<element name="kodPocztowy" type="string" minOccurs="0" maxOccurs="1"/>
+					<element name="dataNadania" type="date" minOccurs="0" maxOccurs="1"/>
+					<element name="miejscowosc" type="emuia:AD_MiejscowoscPropertyType">
+						<annotation>
+							<appinfo>
+								<gml:reversePropertyName>emuia:adres1</gml:reversePropertyName>
+							</appinfo>
+						</annotation>
+					</element>
+					<element name="ulica2" type="emuia:AD_UlicaPlacPropertyType" minOccurs="0" maxOccurs="1">
+						<annotation>
+							<appinfo>
+								<gml:reversePropertyName>emuia:adres2</gml:reversePropertyName>
+							</appinfo>
+						</annotation>
+					</element>
+				</sequence>
+			</extension>
+		</complexContent>
+	</complexType>
+	<complexType name="AD_PunktAdresowyPropertyType">
+		<sequence minOccurs="0">
+			<element ref="emuia:AD_PunktAdresowy"/>
+		</sequence>
+		<attributeGroup ref="gml:AssociationAttributeGroup"/>
+		<attributeGroup ref="gml:OwnershipAttributeGroup"/>
+	</complexType>
+	<simpleType name="AD_RodzajMiejscowosciType">
+		<restriction base="string">
+			<enumeration value="00">
+				<annotation>
+					<appinfo>
+						<gml:description>czescMiejcowosci</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="01">
+				<annotation>
+					<appinfo>
+						<gml:description>wies</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="02">
+				<annotation>
+					<appinfo>
+						<gml:description>kolonia</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="03">
+				<annotation>
+					<appinfo>
+						<gml:description>przysiolek</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="04">
+				<annotation>
+					<appinfo>
+						<gml:description>osada</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="05">
+				<annotation>
+					<appinfo>
+						<gml:description>osadaLesna</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="06">
+				<annotation>
+					<appinfo>
+						<gml:description>osiedle</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="07">
+				<annotation>
+					<appinfo>
+						<gml:description>schroniskoTurystyczne</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="95">
+				<annotation>
+					<appinfo>
+						<gml:description>dzielnicaWarszawy</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="96">
+				<annotation>
+					<appinfo>
+						<gml:description>miasto</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="98">
+				<annotation>
+					<appinfo>
+						<gml:description>delegatura</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="99">
+				<annotation>
+					<appinfo>
+						<gml:description>czescMiasta</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+		</restriction>
+	</simpleType>
+	<simpleType name="AD_RodzajObiektuType">
+		<restriction base="string">
+			<enumeration value="1">
+				<annotation>
+					<appinfo>
+						<gml:description>ulica</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="2">
+				<annotation>
+					<appinfo>
+						<gml:description>aleja</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="3">
+				<annotation>
+					<appinfo>
+						<gml:description>plac</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="4">
+				<annotation>
+					<appinfo>
+						<gml:description>skwer</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="5">
+				<annotation>
+					<appinfo>
+						<gml:description>bulwar</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="6">
+				<annotation>
+					<appinfo>
+						<gml:description>rondo</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="7">
+				<annotation>
+					<appinfo>
+						<gml:description>park</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="8">
+				<annotation>
+					<appinfo>
+						<gml:description>rynek</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="9">
+				<annotation>
+					<appinfo>
+						<gml:description>szosa</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="10">
+				<annotation>
+					<appinfo>
+						<gml:description>droga</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="11">
+				<annotation>
+					<appinfo>
+						<gml:description>osiedle</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="12">
+				<annotation>
+					<appinfo>
+						<gml:description>ogrod</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="13">
+				<annotation>
+					<appinfo>
+						<gml:description>wyspa</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="14">
+				<annotation>
+					<appinfo>
+						<gml:description>wybrzeze</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="15">
+				<annotation>
+					<appinfo>
+						<gml:description>innyLiniowy</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+			<enumeration value="16">
+				<annotation>
+					<appinfo>
+						<gml:description>innyPowierzchniowy</gml:description>
+					</appinfo>
+				</annotation>
+			</enumeration>
+		</restriction>
+	</simpleType>
+</schema>

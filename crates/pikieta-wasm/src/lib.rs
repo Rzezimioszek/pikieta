@@ -250,3 +250,84 @@ pub fn render_report(json: &str, format: &str) -> Result<String, JsError> {
         _ => Err(JsError::new("nieznany format raportu")),
     }
 }
+
+// --- GML ---
+
+/// Wczytany dokument GML; drzewo XML zostaje w pamięci WASM, do JS trafiają widoki.
+#[wasm_bindgen]
+pub struct GmlDoc(pikieta_gml::GmlDocument);
+
+#[wasm_bindgen]
+impl GmlDoc {
+    #[wasm_bindgen(constructor)]
+    pub fn new(text: &str) -> Result<GmlDoc, JsError> {
+        pikieta_gml::GmlDocument::parse(text)
+            .map(GmlDoc)
+            .map_err(|e| JsError::new(&format!("Błąd XML w {e}")))
+    }
+
+    /// Lekki indeks obiektów (JSON).
+    pub fn index_json(&self) -> String {
+        self.0.index_json()
+    }
+
+    /// Geometria do mapy jako bufor binarny, w układzie `target_epsg` (0 = bez przeliczania).
+    pub fn render_buffer(&self, target_epsg: u32) -> Vec<u8> {
+        self.0
+            .render_buffer((target_epsg != 0).then_some(target_epsg))
+    }
+
+    pub fn class_table_json(&self, class: &str) -> String {
+        self.0.class_table_json(class)
+    }
+
+    pub fn properties_json(&self, feature: usize) -> String {
+        self.0.properties_json(feature)
+    }
+
+    pub fn issues_json(&self) -> String {
+        self.0.issues_json()
+    }
+
+    /// Zmienia atrybut; zwraca nową etykietę obiektu.
+    pub fn set_property(
+        &mut self,
+        feature: usize,
+        key: &str,
+        value: &str,
+    ) -> Result<String, JsError> {
+        self.0
+            .set_property(feature, key, value)
+            .map_err(|e| JsError::new(&e))?;
+        Ok(self.0.features[feature].label.clone())
+    }
+
+    /// Dokument jako tekst; bez zmian identyczny z wczytanym.
+    pub fn to_xml(&self) -> String {
+        self.0.to_xml()
+    }
+}
+
+/// Zapisuje punkty jako GML 3.2. `coords` to trójki `[x, y, h]`, brak wysokości to `NaN`.
+#[wasm_bindgen]
+pub fn points_to_gml(
+    ids: Vec<String>,
+    coords: &[f64],
+    codes: Vec<String>,
+    epsg: u32,
+    decimals: usize,
+) -> String {
+    let points: Vec<pikieta_gml::PointOut> = ids
+        .iter()
+        .zip(coords.as_chunks::<3>().0)
+        .zip(&codes)
+        .map(|((id, c), code)| pikieta_gml::PointOut {
+            id,
+            x: c[0],
+            y: c[1],
+            h: (!c[2].is_nan()).then_some(c[2]),
+            code,
+        })
+        .collect();
+    pikieta_gml::points_to_gml(&points, epsg, decimals)
+}

@@ -4,6 +4,8 @@
   import Icon from './Icon.svelte'
   import Launcher from './Launcher.svelte'
   import ReportView from './ReportView.svelte'
+  import GmlView from './GmlView.svelte'
+  import { findLayer, type GmlLayer } from './gml.svelte'
   import ViewSwitch from './ViewSwitch.svelte'
   import { CALCS, calcTitle, type CalcType } from './calcs'
   import Area from './calcs/Area.svelte'
@@ -21,8 +23,12 @@
     epsg: number
     crsLabel: string
     onsketch: (s: Sketch) => void
+    onzoomgml: (target: string[] | { layer: string }) => void
+    onfocusgml: (layer: GmlLayer, feature: number) => void
   }
-  let { ready, epsg, crsLabel, onsketch }: Props = $props()
+  let { ready, epsg, crsLabel, onsketch, onzoomgml, onfocusgml }: Props = $props()
+
+  const gmlLayer = $derived(ui.active?.kind === 'gml' ? findLayer(ui.active.id) : undefined)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const VIEWS: Record<CalcType, Component<any>> = {
@@ -111,6 +117,14 @@
         <strong class="title">Raport obliczeń</strong>
         <span class="sub">Pozycje: {project.report.length} · {crsLabel}</span>
       </div>
+    {:else if gmlLayer}
+      <span class="ic"><Icon name="layers" size={20} /></span>
+      <div class="titles">
+        <strong class="title" title={gmlLayer.name}>{gmlLayer.name}</strong>
+        <span class="sub">
+          Warstwa GML · {gmlLayer.status === 'loading' ? 'wczytywanie…' : `${gmlLayer.count.toLocaleString('pl-PL')} obiektów`}{gmlLayer.dirty ? ' · zmieniona' : ''}
+        </span>
+      </div>
     {:else}
       <span class="ic"><Icon name="panel" size={20} /></span>
       <div class="titles">
@@ -124,8 +138,8 @@
         <button class="close" title="Zamknij (zostaje w historii)" onclick={() => closeCalc(session.id)}>
           <Icon name="x" />
         </button>
-      {:else if ui.active?.kind === 'report'}
-        <button class="close" title="Zamknij raport" onclick={() => (ui.active = null)}><Icon name="x" /></button>
+      {:else if ui.active?.kind === 'report' || gmlLayer}
+        <button class="close" title="Zamknij" onclick={() => (ui.active = null)}><Icon name="x" /></button>
       {/if}
     </div>
   </header>
@@ -139,6 +153,8 @@
       {/key}
     {:else if ui.active?.kind === 'report'}
       <ReportView {crsLabel} />
+    {:else if gmlLayer}
+      {#key gmlLayer.id}<GmlView layer={gmlLayer} onzoom={onzoomgml} onfocus={onfocusgml} />{/key}
     {:else}
       <Launcher onpick={startCalc} />
     {/if}

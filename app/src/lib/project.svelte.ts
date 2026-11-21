@@ -46,7 +46,7 @@ export interface Saved {
 
 export type ViewMode = 'map' | 'split' | 'calc'
 export type RibbonTab = 'project' | 'calc' | 'map' | 'view'
-export type ActiveDoc = { kind: 'calc'; id: string } | { kind: 'report' } | null
+export type ActiveDoc = { kind: 'calc'; id: string } | { kind: 'report' } | { kind: 'gml'; id: string } | null
 
 interface Ui {
   view: ViewMode
@@ -60,6 +60,8 @@ interface Ui {
   yx: boolean
   basemap: BasemapId
   addByClick: boolean
+  /** Karta dolnej tabeli: `points` albo identyfikator warstwy GML. */
+  tableTab: string
 }
 
 const PROJECT_KEY = 'pikieta.project.v1'
@@ -108,6 +110,7 @@ const UI_DEFAULTS: Ui = {
   yx: false,
   basemap: 'orto',
   addByClick: false,
+  tableTab: 'points',
 }
 export const ui = $state<Ui>({ ...UI_DEFAULTS, ...read<Ui>(UI_KEY), addByClick: false })
 if (ui.active?.kind === 'calc' && !project.calcs.some((s) => s.id === (ui.active as { id: string }).id)) {

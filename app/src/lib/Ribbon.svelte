@@ -10,6 +10,7 @@
     projectFile,
     saveProjectFile,
   } from './files.svelte'
+  import { exportPointsGml, gml, importGml, replaceLayers } from './gml.svelte'
   import type { IconName } from './icons'
   import { BASEMAPS, CRS_LIST } from './map'
   import {
@@ -23,11 +24,11 @@
     type RibbonTab,
     type ViewMode,
   } from './project.svelte'
-  import type { Pt } from './core'
+  import type { XY } from './core'
 
   interface Props {
     crsLabel: string
-    onzoom: (points: Pt[]) => void
+    onzoom: (points: XY[]) => void
     onchangecrs: (code: string) => void
   }
   let { crsLabel, onzoom, onchangecrs }: Props = $props()
@@ -61,8 +62,9 @@
   ]
 
   function newProject() {
-    const n = project.points.length + project.calcs.length + project.report.length
-    if (n && !confirm('Zacząć nowy projekt? Punkty, obliczenia i raport zostaną usunięte.')) return
+    const n = project.points.length + project.calcs.length + project.report.length + gml.layers.length
+    if (n && !confirm('Zacząć nowy projekt? Punkty, obliczenia, raport i warstwy GML zostaną usunięte.')) return
+    replaceLayers([])
     project.points = []
     project.calcs = []
     project.report = []
@@ -75,6 +77,10 @@
   async function doOpen() {
     const pts = await openProjectFile()
     if (pts?.length) onzoom(pts)
+  }
+
+  function doImportGml() {
+    importGml()
   }
 
   async function doImport() {
@@ -147,6 +153,16 @@
             </label>
           </div>
           <span class="cap">Punkty</span>
+        </div>
+        <div class="group">
+          <div class="btns">
+            {@render big('layers', 'Wczytaj', doImportGml, { title: 'Wczytaj plik GML (np. EGiB) jako warstwę' })}
+            {@render big('download', 'Punkty', exportPointsGml, {
+              title: 'Zapisz punkty projektu jako GML 3.2',
+              disabled: project.points.length === 0,
+            })}
+          </div>
+          <span class="cap">GML</span>
         </div>
         <div class="group">
           <div class="btns">

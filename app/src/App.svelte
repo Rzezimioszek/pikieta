@@ -1,13 +1,25 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, untrack } from 'svelte'
   import CalcList from './lib/CalcList.svelte'
   import Icon from './lib/Icon.svelte'
+  import GmlTable from './lib/GmlTable.svelte'
   import PointTable from './lib/PointTable.svelte'
   import Ribbon from './lib/Ribbon.svelte'
   import ToolPanel from './lib/ToolPanel.svelte'
   import ViewSwitch from './lib/ViewSwitch.svelte'
   import { coreReady, epsgOf, toGeodetic, transformXY, type XY } from './lib/core'
   import { openProjectFile, saveProjectFile } from './lib/files.svelte'
+  import {
+    featureKey,
+    findLayer,
+    gml,
+    gmlHooks,
+    gmlSelection,
+    gmlTableClass,
+    render as renderGml,
+    restoreLayers,
+    type GmlLayer,
+  } from './lib/gml.svelte'
   import { BASEMAPS, CRS_LIST, createMap, type MapHandle, type Sketch } from './lib/map'
   import {
     addPoints,
@@ -24,6 +36,7 @@
 
   let mapEl = $state<HTMLDivElement>()
   let pointTable = $state<ReturnType<typeof PointTable>>()
+  let gmlTable = $state<ReturnType<typeof GmlTable>>()
   let handle = $state.raw<MapHandle>()
   let coreVersion = $state('')
   let cursor = $state<XY | null>(null)
@@ -47,11 +60,12 @@
     handle?.zoomTo(points)
   }
 
-  function onMapClick(p: XY, pointId: string | null, additive: boolean) {
+  function onMapClick(p: XY, pointId: string | null, additive: boolean, gmlKey: string | null) {
     if (pointId !== null) {
       if (picker.fill) return picker.fill(pointId)
       if (!additive) selection.clear()
       if (!selection.delete(pointId) || !additive) selection.add(pointId)
+      ui.tableTab = 'points'
       pointTable?.reveal(pointId)
       return
     }
@@ -60,11 +74,77 @@
       addPoints([{ id, x: p.x, y: p.y, h: null, code: '' }])
       selection.clear()
       selection.add(id)
+      ui.tableTab = 'points'
       pointTable?.reveal(id)
-    } else if (!additive) {
+      return
+    }
+    if (!additive) {
       selection.clear()
+      gmlSelection.clear()
+    }
+    if (gmlKey) {
+      if (!gmlSelection.delete(gmlKey) || !additive) gmlSelection.add(gmlKey)
+      showGmlFeature(gmlKey, false)
     }
   }
+
+  /** Pokazuje obiekt GML w tabeli (karta warstwy, właściwa klasa) i w panelu warstwy. */
+  function showGmlFeature(key: string, zoom: boolean) {
+    const [layerId, index] = key.split(':')
+    const layer = findLayer(layerId)
+    if (!layer?.index) return
+    ui.tableTab = layer.id
+    gmlTableClass[layer.id] = layer.classOf(Number(index))
+    if (ui.active?.kind !== 'calc') ui.active = { kind: 'gml', id: layer.id }
+    if (zoom) zoomToGml([key])
+    // Tabela klasy wczytuje się asynchronicznie; przewijamy, gdy już jest.
+    setTimeout(() => gmlTable?.reveal(key), 300)
+  }
+
+  function zoomToGml(target: string[] | { layer: string }) {
+    if (ui.view === 'calc') ui.view = 'split'
+    handle?.zoomToGml(target)
+  }
+
+  function focusGml(layer: GmlLayer, feature: number) {
+    const key = featureKey(layer.id, feature)
+    gmlSelection.clear()
+    gmlSelection.add(key)
+    showGmlFeature(key, true)
+  }
+
+  const tableLayer = $derived(ui.tableTab === 'points' ? undefined : findLayer(ui.tableTab))
+
+  // Geometria GML w układzie projektu: po zmianie układu silnik przelicza bufor.
+  $effect(() => {
+    void project.crs
+    for (const l of gml.layers) if (l.status === 'ready') renderGml(l)
+  })
+  // Nowy bufor geometrii → warstwa WebGL na mapie (raz na warstwę i wersję).
+  $effect(() => {
+    if (!handle) return
+    handle.keepGmlLayers(gml.layers.map((l) => l.id))
+    for (const l of gml.layers) {
+      if (!l.geomRev || !l.decoded || !l.index) continue
+      untrack(() => {
+        handle!.setGmlLayer(
+          l.id,
+          { decoded: l.decoded!, classes: l.index!.classes, cls: l.index!.cls, labels: l.index!.label },
+          l.visible,
+          l.hidden,
+        )
+        if (l.zoomOnLoad) {
+          l.zoomOnLoad = false
+          zoomToGml({ layer: l.id })
+        }
+      })
+    }
+  })
+  $effect(() => {
+    for (const l of gml.layers) handle?.setGmlVisibility(l.id, l.visible, [...l.hidden])
+  })
+  $effect(() => handle?.setGmlSelection([...gmlSelection]))
+  gmlHooks.label = (layer, i, label) => handle?.setGmlLabel(layer, i, label)
 
   function startTableResize(e: PointerEvent) {
     const [y0, h0] = [e.clientY, ui.tableHeight]
@@ -91,7 +171,10 @@
   $effect(saveUi)
 
   onMount(() => {
-    coreReady.then((v) => (coreVersion = v))
+    coreReady.then((v) => {
+      coreVersion = v
+      restoreLayers()
+    })
 
     const narrow = window.matchMedia('(max-width: 900px)')
     const sync = () => (env.narrow = narrow.matches)
@@ -174,14 +257,39 @@
         </div>
 
         {#if toolVisible}
-          <ToolPanel ready={!!coreVersion} {epsg} {crsLabel} onsketch={(s) => (sketch = s)} />
+          <ToolPanel
+            ready={!!coreVersion}
+            {epsg}
+            {crsLabel}
+            onsketch={(s) => (sketch = s)}
+            onzoomgml={zoomToGml}
+            onfocusgml={focusGml}
+          />
         {/if}
       </div>
 
       {#if ui.table}
         <div class="splitter" role="separator" aria-orientation="horizontal" onpointerdown={startTableResize}></div>
         <div class="tabledock surface">
-          <PointTable bind:this={pointTable} onzoom={zoomTo} onclose={() => (ui.table = false)} />
+          {#if gml.layers.length}
+            <div class="docktabs" role="tablist" aria-label="Tabele">
+              <button role="tab" aria-selected={!tableLayer} class:on={!tableLayer} onclick={() => (ui.tableTab = 'points')}>
+                <Icon name="table" size={15} /> Punkty
+              </button>
+              {#each gml.layers as l (l.id)}
+                <button role="tab" aria-selected={tableLayer === l} class:on={tableLayer === l} onclick={() => (ui.tableTab = l.id)}>
+                  <Icon name="layers" size={15} /> {l.name}
+                </button>
+              {/each}
+            </div>
+          {/if}
+          {#if tableLayer}
+            {#key tableLayer.id}
+              <GmlTable bind:this={gmlTable} layer={tableLayer} onzoom={zoomToGml} onclose={() => (ui.table = false)} />
+            {/key}
+          {:else}
+            <PointTable bind:this={pointTable} onzoom={zoomTo} onclose={() => (ui.table = false)} />
+          {/if}
         </div>
       {:else}
         <button class="reopen" onclick={() => (ui.table = true)}><Icon name="table" size={16} /> Tabela punktów ({project.points.length})</button>
@@ -319,8 +427,35 @@
     background: var(--accent);
   }
   .tabledock {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 6px;
     min-height: 0;
     padding: 10px 12px;
+  }
+  .docktabs {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .docktabs button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    font-size: 0.8rem;
+    font-weight: 550;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .docktabs button.on {
+    background: var(--field-bg);
+    color: var(--ink);
+    box-shadow: inset 0 -2px 0 var(--accent);
   }
   .reopen {
     justify-self: start;

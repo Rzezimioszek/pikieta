@@ -28,3 +28,11 @@ pikieta-report = { path = "crates/pikieta-report", version = "0.1.0" }
 [profile.release]
 lto = true
 opt-level = "s"
+
+# Rdzeń liczy dużo (pliki GML po kilkaset MB), więc optymalizujemy go także w `tauri dev`.
+[profile.dev.package.pikieta-gml]
+opt-level = 3
+[profile.dev.package.pikieta-crs]
+opt-level = 3
+[profile.dev.package.pikieta-core]
+opt-level = 3

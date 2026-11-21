@@ -2,6 +2,7 @@
 // Chromium, a w pozostałych przeglądarkach zwykłe pobieranie i wybór pliku.
 import { isTauri } from '@tauri-apps/api/core'
 import { parsePoints, renderReport, writePoints, type Pt } from './core'
+import { layersForProject, replaceLayers } from './gml.svelte'
 import {
   addPoints,
   DEFAULT_PRECISION,
@@ -160,7 +161,7 @@ const VERSION = 1
 export const projectFile = $state({ name: '' })
 
 export async function saveProjectFile() {
-  const doc = { format: FORMAT, version: VERSION, saved: new Date().toISOString(), ...project }
+  const doc = { format: FORMAT, version: VERSION, saved: new Date().toISOString(), ...project, gml: await layersForProject() }
   const name = await saveText(projectFile.name || 'projekt.pikieta', JSON.stringify(doc, null, 1), PROJECT)
   if (!name) return
   projectFile.name = name
@@ -171,7 +172,7 @@ export async function saveProjectFile() {
 export async function openProjectFile(): Promise<Pt[] | null> {
   const file = await openText(PROJECT)
   if (!file) return null
-  let doc: Partial<Saved> & { format?: string; version?: number }
+  let doc: Partial<Saved> & { format?: string; version?: number; gml?: Parameters<typeof replaceLayers>[0] }
   try {
     doc = JSON.parse(file.text)
   } catch {
@@ -193,9 +194,13 @@ export async function openProjectFile(): Promise<Pt[] | null> {
   project.calcs = Array.isArray(doc.calcs) ? doc.calcs : []
   project.report = Array.isArray(doc.report) ? doc.report : []
   project.precision = { ...DEFAULT_PRECISION, ...doc.precision }
+  replaceLayers(Array.isArray(doc.gml) ? doc.gml : [])
   selection.clear()
   ui.active = null
   projectFile.name = file.name
-  notify(`Otwarto projekt ${file.name}: ${doc.points.length} pkt, ${project.calcs.length} obliczeń.`)
+  notify(
+    `Otwarto projekt ${file.name}: ${doc.points.length} pkt, ${project.calcs.length} obliczeń` +
+      (doc.gml?.length ? `, ${doc.gml.length} warstw GML.` : '.'),
+  )
   return project.points
 }

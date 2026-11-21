@@ -2,6 +2,7 @@
   import Icon from './Icon.svelte'
   import Launcher from './Launcher.svelte'
   import { CALCS, calcTitle } from './calcs'
+  import { gml, persistLayer } from './gml.svelte'
   import {
     closeCalc,
     deleteCalc,
@@ -154,6 +155,40 @@
   </nav>
 
   <footer>
+    {#if gml.layers.length}
+      <h3>Warstwy GML</h3>
+      <ul class="layers">
+        {#each gml.layers as l (l.id)}
+          <li class="row" class:active={ui.active?.kind === 'gml' && ui.active.id === l.id}>
+            <button
+              class="open"
+              onclick={() => {
+                ui.active = { kind: 'gml', id: l.id }
+                ui.tableTab = l.id
+              }}
+            >
+              <span class="ic"><Icon name="layers" size={16} /></span>
+              <span class="txt">
+                <span class="t">{l.name}{l.dirty ? ' •' : ''}</span>
+                <span class="sub">
+                  {#if l.status === 'loading'}wczytywanie…{:else if l.status === 'error'}błąd wczytywania{:else}{l.count.toLocaleString('pl-PL')} obiektów{l.issues.some((i) => i.severity === 'error') ? ' · błędy' : ''}{/if}
+                </span>
+              </span>
+            </button>
+            <input
+              type="checkbox"
+              class="vis"
+              title="Widoczna na mapie"
+              checked={l.visible}
+              onchange={() => {
+                l.visible = !l.visible
+                persistLayer(l)
+              }}
+            />
+          </li>
+        {/each}
+      </ul>
+    {/if}
     <button class="report" class:active={ui.active?.kind === 'report'} onclick={showReport}>
       <Icon name="report" size={16} /> Raport
       {#if project.report.length}<span class="count">{project.report.length}</span>{/if}
@@ -348,6 +383,17 @@
     background: var(--field-bg);
     border: 1px solid var(--field-edge);
     font-size: 0.72rem;
+  }
+  .layers {
+    max-height: 180px;
+    overflow-y: auto;
+    margin-bottom: 4px;
+  }
+  .vis {
+    margin-right: 10px;
+  }
+  footer h3 {
+    margin-top: 0;
   }
   .ver {
     padding-left: 10px;

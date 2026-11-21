@@ -12,6 +12,7 @@ import ImageWMS from 'ol/source/ImageWMS'
 import VectorSource from 'ol/source/Vector'
 import { Circle, Fill, Stroke, Style, Text } from 'ol/style'
 import proj4 from 'proj4'
+import { GmlMapLayers, type GmlLayerData } from './gmlmap'
 
 /** Punkt w konwencji geodezyjnej: x na północ, y na wschód. */
 export interface GeoPoint {
@@ -95,13 +96,23 @@ export interface MapHandle {
   setPoints(points: MapPoint[], selected: ReadonlySet<string>): void
   setSketch(sketch: Sketch): void
   zoomTo(points: GeoPoint[]): void
+  setGmlLayer(id: string, data: GmlLayerData, visible: boolean, hidden: string[]): void
+  setGmlVisibility(id: string, visible: boolean, hidden: string[]): void
+  setGmlLabel(id: string, i: number, label: string): void
+  keepGmlLayers(ids: string[]): void
+  setGmlSelection(keys: Iterable<string>): void
+  /** Przybliża do obiektów GML (klucze `warstwa:numer`) albo całej warstwy. */
+  zoomToGml(target: string[] | { layer: string }): void
   destroy(): void
 }
 
 interface Callbacks {
   onPointer(p: GeoPoint | null): void
-  /** `pointId` to numer klikniętego punktu albo `null`; `additive` to kliknięcie z Ctrl lub Shift. */
-  onClick(p: GeoPoint, pointId: string | null, additive: boolean): void
+  /**
+   * `pointId` to numer klikniętego punktu projektu, `gmlKey` klucz obiektu GML (gdy nie trafiono punktu);
+   * `additive` to kliknięcie z Ctrl lub Shift.
+   */
+  onClick(p: GeoPoint, pointId: string | null, additive: boolean, gmlKey: string | null): void
 }
 
 // OpenLayers trzyma współrzędne jako [wschód, północ].
@@ -184,9 +195,13 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
       hitTolerance: 8,
     })
     const ev = e.originalEvent as MouseEvent
-    cb.onClick(toGeo(e.coordinate), hit ?? null, ev.ctrlKey || ev.metaKey || ev.shiftKey)
+    const gmlHit = hit ? null : gmlLayers.pick(e.coordinate, 5 * map.getView().getResolution()!)
+    cb.onClick(toGeo(e.coordinate), hit ?? null, ev.ctrlKey || ev.metaKey || ev.shiftKey, gmlHit ?? null)
   })
   target.addEventListener('pointerleave', () => cb.onPointer(null))
+  const gmlLayers = new GmlMapLayers(map)
+  sketchLayer.setZIndex(30)
+  pointLayer.setZIndex(31)
   // Panel obok mapy zmienia jej rozmiar (tryby widoku, tabela, lista obliczeń).
   const resize = new ResizeObserver(() => map.updateSize())
   resize.observe(target)
@@ -256,9 +271,21 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
         duration: 300,
       })
     },
+    setGmlLayer: (id, data, visible, hidden) => gmlLayers.set(id, data, visible, hidden),
+    setGmlVisibility: (id, visible, hidden) => gmlLayers.setVisibility(id, visible, hidden),
+    setGmlLabel: (id, i, label) => gmlLayers.setLabel(id, i, label),
+    keepGmlLayers: (ids) => gmlLayers.keep(ids),
+    setGmlSelection: (keys) => gmlLayers.setSelection(keys),
+    zoomToGml(target) {
+      const ext = gmlLayers.extent(target)
+      if (!ext) return
+      const view = map.getView()
+      view.fit(ext, { padding: [60, 60, 60, 60], maxZoom: view.getZoomForResolution(0.1), duration: 300 })
+    },
     destroy() {
       resize.disconnect()
       map.setTarget(undefined)
     },
   }
 }
+

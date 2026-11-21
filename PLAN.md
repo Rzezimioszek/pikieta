@@ -125,6 +125,38 @@ Domknięcie etapu (21.11.2026):
 
 Niesprawdzone, przeniesione na etap 5 (Android): systemowe okna zapisu i odczytu na Androidzie oraz w ręcznie obsługiwanym oknie Tauri (testy zrobione skryptem nie klikają w natywne okna), układ na fizycznym telefonie.
 
+## Stan etapu 3
+
+Zrobione (21.11.2026):
+
+- `pikieta-gml`, bezstratne drzewo XML: zachowuje dokładny tekst znaczników, białe znaki, komentarze, CDATA i deklaracje; eksport bez zmian jest identyczny bajt w bajt z plikiem źródłowym, a edycja atrybutu zmienia tylko jego element;
+- geometria GML 3.2: Point, LineString, LinearRing, Curve (LineStringSegment, Arc, ArcString, Circle zagęszczane do łamanej), Ring z curveMember, CompositeCurve, OrientableCurve, Polygon, Surface/PolygonPatch, Multi*, MultiGeometry; `posList` 2D i 3D, seria `pos`, `coordinates` z GML 2; przestrzeń nazw GML rozpoznawana z deklaracji `xmlns`;
+- obiekty i atrybuty: kolekcje z `featureMember`/`featureMembers`/`member`, atrybuty proste, odwołania `xlink:href`, atrybuty zagnieżdżone spłaszczane do ścieżek (np. `idIIP.lokalnyId`); etykiety EGiB z identyfikatorów (numer działki, punktu, budynku);
+- walidacja: powtórzone `gml:id`, odwołania lokalne bez celu, brak lub różne `srsName`, pierścienie niezamknięte, za krótkie i samoprzecinające się, wymagana geometria i `idDzialki`, powtórzone działki, punkty graniczne poza wierzchołkami działki (tolerancja 1 cm);
+- zapis punktów projektu do GML 3.2 (schemat `urn:pikieta:punkty:1.0`);
+- aplikacja: warstwy GML na mapie ze stylami klas EGiB i przeliczeniem do układu projektu, zaznaczanie kliknięciem, tabela obiektów jak tabela atrybutów (wybór klasy, wyszukiwanie, edycja prostych atrybutów), panel warstwy z klasami, widocznością i listą uwag walidacji (kliknięcie wskazuje obiekt), punkty graniczne do punktów projektu, warstwy zapamiętywane w IndexedDB i w pliku projektu.
+
+Sprawdzone na syntetycznym pliku EGiB (`crates/pikieta-gml/tests/data/egib-przyklad.gml`, dane wymyślone).
+
+Wydajność dużych plików (21.11.2026), po zgłoszeniu, że plik 150 MB blokował mapę:
+
+- rdzeń: nazwy i białe znaki w drzewie XML współdzielone, znaczniki kanoniczne nieprzechowywane, atrybuty obiektów liczone na żądanie; wczytanie 150 MB (157 tys. obiektów) natywnie 5,0 s → 2,9 s, zapis dalej bajt w bajt;
+- do mapy trafia jeden bufor binarny z geometrią już w układzie projektu (11 MB, 0,45 s), zamiast JSON z zagnieżdżonymi tablicami; do interfejsu lekki indeks (3 MB), a atrybuty tylko dla pokazanej klasy albo zaznaczonego obiektu;
+- przeglądarka: dokument w Web Workerze z WASM, interfejs płynny w trakcie wczytywania (150 MB w 9,7 s, ponowne wczytanie z IndexedDB 3,7 s);
+- aplikacja desktopowa: plik czyta i przetwarza natywny Rust (komendy Tauri), bufor geometrii przez binarną odpowiedź IPC; 150 MB w 3,9 s; rdzeń kompilowany z optymalizacją także w `tauri dev`;
+- mapa: geometria GML rysowana przez WebGL (w WebView2 na sprzętowym GPU przez Direct3D 11), etykiety i zaznaczenie w lekkich warstwach canvas, wybór kliknięciem przez indeks przestrzenny; punkty graniczne rysowane dopiero poniżej 1,5 m/px;
+- edycje atrybutów zapisywane jako dziennik i odtwarzane po ponownym wczytaniu źródła (plik w IndexedDB albo ścieżka na dysku).
+
+Pomiary płynności przesuwania mapy z 157 tys. obiektów: przy przybliżeniu ok. 60 klatek/s; z całą warstwą w widoku mediana 17 ms na klatkę, ale pojedyncze klatki 100–300 ms przy przebudowie buforów WebGL.
+
+Znane ograniczenia: pamięć procesu desktopowego to ok. 0,9 GB na dokument 150 MB (drzewo XML w pamięci); duże warstwy nie trafiają do pliku projektu w przeglądarce (powyżej 30 MB), na desktopie zapisuje się ścieżka; na Androidzie działa wątek roboczy z WASM (niesprawdzone na urządzeniu).
+
+Do zamknięcia etapu:
+
+- test na prawdziwym pliku EGiB z ośrodka dokumentacji (zanonimizowanym), w tym wydajność dla dużych plików;
+- profile GESUT i BDOT500 (rozpoznawanie klas, etykiety, style);
+- walidacja względem schematów XSD tylko w zakresie reguł, bez pełnego walidatora.
+
 ## Ryzyka
 
 - **Zakres GML**: rozrośnie się bez twardych profili i prawdziwych plików testowych z ośrodków.
