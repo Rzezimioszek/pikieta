@@ -306,3 +306,58 @@ fn symbol_codes_follow_base_map_catalogue() {
     // Kod podany w pliku ma pierwszeństwo.
     assert_eq!(find(&d, "d1").code, "OTDA");
 }
+
+#[test]
+fn carto_texts_from_graphic_presentation() {
+    let xml = r##"<?xml version="1.0" encoding="UTF-8"?>
+<gml:FeatureCollection xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:egb="ewidencjaGruntowIBudynkow:1.0"
+  xmlns:xlink="http://www.w3.org/1999/xlink" gml:id="k">
+  <gml:featureMember>
+    <egb:EGB_DzialkaEwidencyjna gml:id="DZ.1">
+      <egb:idDzialki>146501_8.0101.12/1</egb:idDzialki>
+      <egb:geometria><gml:Polygon gml:id="g1" srsName="urn:ogc:def:crs:EPSG::2178"><gml:exterior><gml:LinearRing>
+        <gml:posList>0 0 0 10 10 10 10 0 0 0</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></egb:geometria>
+    </egb:EGB_DzialkaEwidencyjna>
+  </gml:featureMember>
+  <gml:featureMember>
+    <egb:PrezentacjaGraficzna gml:id="PG.1">
+      <egb:kodObiektu>EGDE</egb:kodObiektu>
+      <egb:etykieta><egb:Etykieta>
+        <egb:geometria><gml:Point gml:id="p1" srsName="urn:ogc:def:crs:EPSG::2178"><gml:pos>5 5</gml:pos></gml:Point></egb:geometria>
+        <egb:justyfikacja>7</egb:justyfikacja>
+        <egb:katObrotu>1.25</egb:katObrotu>
+        <egb:tekst>12/1</egb:tekst>
+      </egb:Etykieta></egb:etykieta>
+      <egb:obiektPrzedstawiany xlink:href="#DZ.1"/>
+    </egb:PrezentacjaGraficzna>
+  </gml:featureMember>
+  <gml:featureMember>
+    <egb:PrezentacjaGraficzna gml:id="PG.2">
+      <egb:katObrotu>0.5</egb:katObrotu>
+      <egb:etykieta><egb:Etykieta>
+        <egb:geometria><gml:Point gml:id="p2" srsName="urn:ogc:def:crs:EPSG::2178"><gml:pos>2 2</gml:pos></gml:Point></egb:geometria>
+      </egb:Etykieta></egb:etykieta>
+      <egb:obiektPrzedstawiany xlink:href="DZ.1"/>
+    </egb:PrezentacjaGraficzna>
+  </gml:featureMember>
+  <gml:featureMember>
+    <egb:PrezentacjaGraficzna gml:id="PG.3">
+      <egb:obiektPrzedstawiany xlink:href="BRAK"/>
+    </egb:PrezentacjaGraficzna>
+  </gml:featureMember>
+</gml:FeatureCollection>"##;
+    let d = GmlDocument::parse(xml).unwrap();
+    let t = d.carto_texts();
+    assert_eq!(t.len(), 2);
+    assert_eq!(
+        (t[0].text.as_str(), t[0].justification, t[0].target),
+        ("12/1", 7, Some(0))
+    );
+    assert!((t[0].angle - 1.25).abs() < 1e-12);
+    assert_eq!(t[0].at, [5.0, 5.0]);
+    // Bez tekstu: etykieta obiektu opisywanego; obrót z poziomu prezentacji.
+    assert_eq!((t[1].text.as_str(), t[1].angle), ("12/1", 0.5));
+    let json: serde_json::Value = serde_json::from_str(&d.texts_json(None)).unwrap();
+    assert_eq!(json[0]["x"], 5.0);
+    assert_eq!(json[0]["s"], "12/1");
+}

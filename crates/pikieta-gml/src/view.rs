@@ -139,6 +139,25 @@ impl GmlDocument {
         out
     }
 
+    /// Teksty kartograficzne do mapy (JSON): położenie w układzie `target_epsg` jako wschód, północ.
+    /// Pola: `f` obiekt prezentacji, `t` obiekt opisywany (albo null), `x`, `y`, `s` treść,
+    /// `j` justyfikacja, `a` obrót [rad].
+    pub fn texts_json(&self, target_epsg: Option<u32>) -> String {
+        let fallback = self.epsg();
+        let mut cache: HashMap<Option<u32>, Option<Reproject>> = HashMap::new();
+        let list: Vec<Value> = self
+            .carto_texts()
+            .into_iter()
+            .map(|t| {
+                let src = t.srs.as_deref().and_then(epsg_from_srs).or(fallback);
+                let re = cache.entry(src).or_insert_with(|| Reproject::new(src, target_epsg));
+                let [n, e] = re.as_ref().map_or(t.at, |r| r.apply(t.at));
+                json!({ "f": t.feature, "t": t.target, "x": e, "y": n, "s": t.text, "j": t.justification, "a": t.angle })
+            })
+            .collect();
+        Value::Array(list).to_string()
+    }
+
     /// Najczęstszy kod EPSG geometrii.
     pub fn epsg(&self) -> Option<u32> {
         self.srs().as_deref().and_then(epsg_from_srs)

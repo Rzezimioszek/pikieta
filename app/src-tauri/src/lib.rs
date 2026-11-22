@@ -10,6 +10,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             gml::gml_open,
             gml::gml_render,
+            gml::gml_texts,
             gml::gml_class_table,
             gml::gml_properties,
             gml::gml_set,

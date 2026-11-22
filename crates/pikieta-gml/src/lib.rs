@@ -45,6 +45,24 @@ pub struct Feature {
     pub srs: Option<String>,
 }
 
+/// Tekst kartograficzny z obiektu `PrezentacjaGraficzna` (położenie opisu na mapie zasadniczej).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CartoText {
+    /// Numer obiektu `PrezentacjaGraficzna`.
+    pub feature: usize,
+    /// Numer obiektu opisywanego (`obiektPrzedstawiany`), jeśli jest w pliku.
+    pub target: Option<usize>,
+    /// Punkt wstawienia w układzie pliku.
+    pub at: P,
+    pub srs: Option<String>,
+    pub text: String,
+    /// Wyrównanie 1–9 jak na klawiaturze numerycznej (7 lewy górny … 3 prawy dolny); 0 brak.
+    pub justification: u8,
+    /// Obrót w radianach, przeciwnie do ruchu wskazówek zegara od osi wschodniej (sprawdzone na danych
+    /// z ośrodka: numery adresowe leżą wzdłuż krawędzi budynków).
+    pub angle: f64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
     Error,
@@ -142,6 +160,69 @@ impl GmlDocument {
 
     fn element(&self, feature: usize) -> Option<&Element> {
         self.doc.root()?.element_at(self.paths.get(feature)?)
+    }
+
+    /// Teksty kartograficzne z obiektów `PrezentacjaGraficzna`. Treść: `tekst`, a gdy go brak,
+    /// atrybut wskazany w `nazwaAtrybutu` albo etykieta obiektu opisywanego.
+    pub fn carto_texts(&self) -> Vec<CartoText> {
+        let by_id: HashMap<&str, usize> = self
+            .features
+            .iter()
+            .enumerate()
+            .map(|(i, f)| (f.id.as_str(), i))
+            .collect();
+        let num = |e: &Element, k: &str| child_text(e, k).parse::<f64>().ok();
+        let mut out = Vec::new();
+        for (i, f) in self.features.iter().enumerate() {
+            if f.class != "PrezentacjaGraficzna" {
+                continue;
+            }
+            let Some(el) = self.element(i) else { continue };
+            let target = el
+                .child("obiektPrzedstawiany")
+                .and_then(|c| c.attr_local("href"))
+                .and_then(|h| by_id.get(h.trim_start_matches('#')).copied());
+            let default_angle = num(el, "katObrotu").unwrap_or(0.0);
+            for e in el
+                .elements()
+                .filter(|c| c.local_name() == "etykieta")
+                .filter_map(|c| c.child("Etykieta"))
+            {
+                let Some(g) = e
+                    .child("geometria")
+                    .and_then(|g| self.names.find_geometry(g))
+                else {
+                    continue;
+                };
+                let Ok(Geometry::Point(at)) = geometry::read(g, 2) else {
+                    continue;
+                };
+                let mut text = child_text(e, "tekst");
+                if text.is_empty() {
+                    let attr = child_text(e, "nazwaAtrybutu");
+                    text = match target {
+                        Some(t) if !attr.is_empty() => self.property(t, &attr).unwrap_or_default(),
+                        Some(t) if self.features[t].label != self.features[t].id => {
+                            self.features[t].label.clone()
+                        }
+                        _ => String::new(),
+                    };
+                }
+                if text.is_empty() {
+                    continue;
+                }
+                out.push(CartoText {
+                    feature: i,
+                    target,
+                    at,
+                    srs: g.attr("srsName").or_else(|| f.srs.clone()),
+                    text,
+                    justification: child_text(e, "justyfikacja").parse().unwrap_or(0),
+                    angle: num(e, "katObrotu").unwrap_or(default_angle),
+                });
+            }
+        }
+        out
     }
 
     /// Atrybuty obiektu, liczone na żądanie (przy dużych plikach nie trzymamy ich dla wszystkich obiektów).
@@ -607,20 +688,36 @@ fn describe(class: &str, el: &Element) -> Described {
         }
         // Opis budynku: rodzaj wg KŚT i numer najwyższej kondygnacji nadziemnej, np. „m3”.
         "EGB_Budynek" | "OT_BudynekNiewykazanyWEGIB" => {
-            let above = t("liczbaKondygnacjiNadziemnych");
-            if above.parse::<i64>().is_ok_and(|n| n == 0) {
-                variant |= VARIANT_UNDERGROUND;
-            }
+            let count = |k: &str| t(k).parse::<i64>().unwrap_or(0);
+            let (above, below) = (
+                count("liczbaKondygnacjiNadziemnych"),
+                count("liczbaKondygnacjiPodziemnych"),
+            );
             let kst = if class == "EGB_Budynek" {
                 t("rodzajWgKST")
             } else {
                 t("rodzajKST")
             };
-            format!("{kst}{above}")
+            // Budynek podziemny ma tylko kondygnacje podziemne; brak obu liczb (0 i 0) to brak danych.
+            if above == 0 && below > 0 {
+                variant |= VARIANT_UNDERGROUND;
+                format!("{kst}-{below}")
+            } else if above > 0 {
+                format!("{kst}{above}")
+            } else {
+                kst
+            }
         }
         // Pikiety BDOT500 opisane wysokością.
         "OT_Rzedna" => t("rzedna"),
         "EGB_KonturUzytkuGruntowego" => t("OFU"),
+        "EGB_AdresNieruchomosci" => t("numerPorzadkowy"),
+        // Rzędne GESUT opisane wysokością (rzędna albo rzędna góry lub dołu).
+        "GES_Rzedna" => ["rzedna", "rzednaGory", "rzednaDolu"]
+            .iter()
+            .map(|k| t(k))
+            .find(|v| !v.is_empty())
+            .unwrap_or_default(),
         "EGB_KonturKlasyfikacyjny" => format!("{}{}", t("OZU"), t("OZK")),
         c if c.starts_with("GES_") => {
             let planned = t("status") == "p";
@@ -691,7 +788,18 @@ fn symbol_code(class: &str, t: &dyn Fn(&str) -> String) -> String {
     if given.len() == 4 && given.bytes().all(|b| b.is_ascii_uppercase()) {
         return given;
     }
-    let sub = |prefix: &str, attr: &str| match t(attr).as_bytes() {
+    // Schemat BDOT500 ma też pisownię z wielkiej litery (np. `RodzajObiektu` w OT_SportIRekreacja).
+    let value = |attr: &str| {
+        let v = t(attr);
+        if !v.is_empty() {
+            return v;
+        }
+        let mut c = attr.chars();
+        c.next()
+            .map(|f| t(&(f.to_uppercase().collect::<String>() + c.as_str())))
+            .unwrap_or_default()
+    };
+    let sub = |prefix: &str, attr: &str| match value(attr).as_bytes() {
         [b] if b.is_ascii_alphabetic() => format!("{prefix}{}", b.to_ascii_uppercase() as char),
         _ => String::new(),
     };

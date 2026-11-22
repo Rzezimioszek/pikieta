@@ -2,7 +2,7 @@
 // tu jest tylko lekki indeks, uwagi walidacji i bufor geometrii dla mapy.
 import { SvelteSet } from 'svelte/reactivity'
 import { epsgOf, type Pt, type XY } from './core'
-import { engine, type GmlIndex, type GmlIssue, type GmlSource } from './gml-engine'
+import { engine, type CartoText, type GmlIndex, type GmlIssue, type GmlSource } from './gml-engine'
 import { decode, parts, vertices, type Decoded } from './gmlbuf'
 import { saveText, type FileType } from './files.svelte'
 import { note } from './perf'
@@ -37,6 +37,8 @@ export class GmlLayer {
   origin: Origin
   edits: Edit[] = []
   decoded: Decoded | null = null
+  /** Teksty kartograficzne (PrezentacjaGraficzna) w układzie mapy. */
+  texts: CartoText[] = []
   renderedEpsg = 0
   /** Przybliżyć mapę do warstwy po pierwszym narysowaniu (świeżo wczytana). */
   zoomOnLoad = false
@@ -190,9 +192,10 @@ export async function render(layer: GmlLayer) {
   const epsg = epsgOf(project.crs)
   if (layer.decoded && layer.renderedEpsg === epsg) return
   const t0 = performance.now()
-  const buf = await engine.render(layer.doc, epsg)
-  note('bufor geometrii (silnik)', t0)
+  const [buf, texts] = await Promise.all([engine.render(layer.doc, epsg), engine.texts(layer.doc, epsg)])
+  note('bufor geometrii i teksty (silnik)', t0)
   layer.decoded = decode(buf)
+  layer.texts = texts
   layer.renderedEpsg = epsg
   layer.geomRev++
 }

@@ -32,10 +32,10 @@ const ops: Record<string, (...args: never[]) => unknown> = {
     return { id, index: JSON.parse(d.index_json()), issues: JSON.parse(d.issues_json()) }
   },
   render: (id: string, epsg: number) => doc(id).render_buffer(epsg).buffer,
+  texts: (id: string, epsg: number) => JSON.parse(doc(id).texts_json(epsg)),
   classTable: (id: string, cls: string) => JSON.parse(doc(id).class_table_json(cls)),
   properties: (id: string, feature: number) => JSON.parse(doc(id).properties_json(feature)),
-  setProperty: (id: string, feature: number, key: string, value: string) =>
-    doc(id).set_property(feature, key, value),
+  setProperty: (id: string, feature: number, key: string, value: string) => doc(id).set_property(feature, key, value),
   xml: (id: string) => doc(id).to_xml(),
   close(id: string) {
     docs.get(id)?.free()

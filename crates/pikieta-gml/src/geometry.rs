@@ -272,6 +272,19 @@ fn arc(p1: P, p2: P, p3: P, full_circle: bool) -> Vec<P> {
     out
 }
 
+/// Pełny okrąg o środku `c` i promieniu `r` jako zamknięta łamana (kroki co najwyżej 2°).
+fn circle(c: P, r: f64) -> Vec<P> {
+    let steps = 180;
+    let mut out: Vec<P> = (0..steps)
+        .map(|i| {
+            let t = TAU * i as f64 / steps as f64;
+            [c[0] + r * t.cos(), c[1] + r * t.sin()]
+        })
+        .collect();
+    out.push(out[0]);
+    out
+}
+
 fn append(line: &mut Vec<P>, part: Vec<P>) {
     let skip = usize::from(!line.is_empty() && line.last() == part.first());
     line.extend(part.into_iter().skip(skip));
@@ -301,6 +314,20 @@ fn curve_segments(e: &Element, dim: usize) -> GeoResult<Vec<P>> {
                     return Err("Circle: potrzeba trzech punktów".into());
                 }
                 append(&mut out, arc(pts[0], pts[1], pts[2], true));
+            }
+            // Okrąg ze środka i promienia (np. eksport EWMAPA dla studzienek i komór).
+            "CircleByCenterPoint" => {
+                let [c] = pts.as_slice() else {
+                    return Err("CircleByCenterPoint: potrzeba jednego punktu środka".into());
+                };
+                let r = s
+                    .child("radius")
+                    .map(|r| numbers(&r.text()))
+                    .transpose()?
+                    .and_then(|v| v.first().copied())
+                    .filter(|r| *r > 0.0)
+                    .ok_or("CircleByCenterPoint: brak dodatniego promienia")?;
+                append(&mut out, circle(*c, r));
             }
             other => return Err(format!("nieobsługiwany odcinek krzywej {other}")),
         }
@@ -529,6 +556,19 @@ mod tests {
             rings[0],
             &vec![[0.0, 0.0], [0.0, 10.0], [10.0, 10.0], [0.0, 0.0]]
         );
+    }
+
+    #[test]
+    fn circle_by_center_point() {
+        let g = geom(
+            "<gml:Polygon><gml:exterior><gml:Ring><gml:curveMember><gml:Curve><gml:segments>             <gml:CircleByCenterPoint numArc=\"1\"><gml:pos>5.86E+0006 6.55E+0006</gml:pos>             <gml:radius uom=\"m\">1.5E+0000</gml:radius></gml:CircleByCenterPoint>             </gml:segments></gml:Curve></gml:curveMember></gml:Ring></gml:exterior></gml:Polygon>",
+        )
+        .unwrap();
+        let ring = g.rings()[0].clone();
+        assert_eq!(ring.first(), ring.last());
+        for p in &ring {
+            assert!(((p[0] - 5.86e6).hypot(p[1] - 6.55e6) - 1.5).abs() < 1e-9);
+        }
     }
 
     #[test]

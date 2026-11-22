@@ -86,6 +86,11 @@ pub fn gml_render(id: String, epsg: u32, state: State<'_, Docs>) -> Result<Respo
 }
 
 #[tauri::command]
+pub fn gml_texts(id: String, epsg: u32, state: State<'_, Docs>) -> Result<String, String> {
+    state.with(&id, |d| Ok(d.texts_json((epsg != 0).then_some(epsg))))
+}
+
+#[tauri::command]
 pub fn gml_class_table(
     id: String,
     class_name: String,

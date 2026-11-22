@@ -5,3 +5,6 @@ dist/
 /app/src/lib/wasm/
 # Instrukcje programów komercyjnych (tylko lokalnie, bez publikacji)
 /inspiracje/
+__pycache__/
+# Prawdziwe pliki GML do testów (tylko lokalnie)
+/test_gml/

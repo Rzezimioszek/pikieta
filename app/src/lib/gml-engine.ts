@@ -26,6 +26,22 @@ export interface GmlIssue {
   message: string
 }
 
+/** Tekst kartograficzny (PrezentacjaGraficzna) w układzie mapy. */
+export interface CartoText {
+  /** Obiekt prezentacji. */
+  f: number
+  /** Obiekt opisywany albo null. */
+  t: number | null
+  /** Wschód, północ. */
+  x: number
+  y: number
+  s: string
+  /** Justyfikacja 1–9 jak na klawiaturze numerycznej; 0 brak. */
+  j: number
+  /** Obrót [rad], przeciwnie do ruchu wskazówek zegara od osi wschodniej. */
+  a: number
+}
+
 export interface ClassTable {
   keys: string[]
   editable: boolean[]
@@ -46,6 +62,7 @@ export interface GmlEngine {
   native: boolean
   open(src: GmlSource): Promise<Opened>
   render(id: string, epsg: number): Promise<ArrayBuffer>
+  texts(id: string, epsg: number): Promise<CartoText[]>
   classTable(id: string, cls: string): Promise<ClassTable>
   properties(id: string, feature: number): Promise<[string, string, boolean][]>
   /** Zwraca nową etykietę obiektu. */
@@ -77,6 +94,7 @@ function workerEngine(): GmlEngine {
     native: false,
     open: (src) => call('open', src),
     render: (id, epsg) => call('render', id, epsg),
+    texts: (id, epsg) => call('texts', id, epsg),
     classTable: (id, cls) => call('classTable', id, cls),
     properties: (id, f) => call('properties', id, f),
     setProperty: (id, f, k, v) => call('setProperty', id, f, k, v),
@@ -96,6 +114,7 @@ function tauriEngine(): GmlEngine {
       return { id: r.id, index: JSON.parse(r.index), issues: JSON.parse(r.issues) }
     },
     render: (id, epsg) => invoke<ArrayBuffer>('gml_render', { id, epsg }),
+    texts: (id, epsg) => json(invoke<string>('gml_texts', { id, epsg })),
     classTable: (id, cls) => json(invoke<string>('gml_class_table', { id, className: cls })),
     properties: (id, feature) => json(invoke<string>('gml_properties', { id, feature })),
     setProperty: (id, feature, key, value) => invoke<string>('gml_set', { id, feature, key, value }),

@@ -267,8 +267,47 @@ function fallbackCode(cls: string) {
   return ''
 }
 
+/** Obiekty niewidoczne na mapie (prezentacje graficzne rysujemy jako teksty obiektów opisywanych). */
+const HIDDEN: ClassStyle = { order: 0, maxRes: -1 }
+const TEXT_FONT = `${Math.max(11, Math.round(px(2)))}px sans-serif`
+
+const SPECIAL: Record<string, ClassStyle> = {
+  PrezentacjaGraficzna: HIDDEN,
+  // Adres nieruchomości: sam numer porządkowy.
+  EGB_AdresNieruchomosci: {
+    order: ORDER.budynki,
+    maxRes: RES_DETAIL,
+    label: { color: BLACK, maxRes: 0.3, font: TEXT_FONT },
+  },
+  // Rzędne GESUT: punkt i wysokość tekstem 1,5 mm (zał. 4, rozdz. 1 ust. 10).
+  GES_Rzedna: {
+    order: ORDER.uzbrojenie + 1,
+    maxRes: 0.5,
+    point: { radius: 1.2, stroke: BLACK, strokeWidth: 1, fill: BLACK },
+    label: { color: BLACK, maxRes: 0.25, font: '11px sans-serif' },
+  },
+}
+
+const textStyles = new Map<ClassStyle, ClassStyle>()
+/** Styl tekstu kartograficznego opisującego obiekt o danym stylu: kolor opisu albo linii znaku. */
+export function textStyle(s: ClassStyle | undefined): ClassStyle {
+  if (!s) return { order: 0, maxRes: RES_MAIN, label: { color: BLACK, maxRes: 0.5, font: TEXT_FONT } }
+  let t = textStyles.get(s)
+  if (!t) {
+    const color = s.label?.color ?? s.line?.color ?? BLACK
+    t = {
+      order: s.order,
+      maxRes: RES_MAIN,
+      label: { color, maxRes: s.label?.maxRes ?? 0.5, font: s.label?.font ?? TEXT_FONT },
+    }
+    textStyles.set(s, t)
+  }
+  return t
+}
+
 /** Styl obiektu: klasa, kod znaku umownego z rdzenia i wariant (bity `VARIANT_*`). */
 export function styleOf(cls: string, code = '', variant = 0): ClassStyle {
+  if (cls in SPECIAL) return SPECIAL[cls]
   const c = code || fallbackCode(cls)
   return c ? fromCatalog(c, variant) : DEFAULT
 }

@@ -129,7 +129,7 @@
       untrack(() => {
         handle!.setGmlLayer(
           l.id,
-          { decoded: l.decoded!, classes: l.index!.classes, cls: l.index!.cls, labels: l.index!.label, variant: l.index!.variant, codes: l.index!.codes, code: l.index!.code },
+          { decoded: l.decoded!, classes: l.index!.classes, cls: l.index!.cls, labels: l.index!.label, variant: l.index!.variant, codes: l.index!.codes, code: l.index!.code, texts: l.texts },
           l.visible,
           l.hidden,
         )

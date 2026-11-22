@@ -277,6 +277,11 @@ impl GmlDoc {
             .render_buffer((target_epsg != 0).then_some(target_epsg))
     }
 
+    /// Teksty kartograficzne (PrezentacjaGraficzna) w układzie `target_epsg` (0 = bez przeliczania).
+    pub fn texts_json(&self, target_epsg: u32) -> String {
+        self.0.texts_json((target_epsg != 0).then_some(target_epsg))
+    }
+
     pub fn class_table_json(&self, class: &str) -> String {
         self.0.class_table_json(class)
     }

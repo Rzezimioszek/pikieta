@@ -162,10 +162,18 @@ Druga runda (21.11.2026), po uwagach z testu na prawdziwym pliku (127 tys. obiek
 
 Znane ograniczenia: pamięć procesu desktopowego to ok. 0,9 GB na dokument 150 MB (drzewo XML w pamięci); duże warstwy nie trafiają do pliku projektu w przeglądarce (powyżej 30 MB), na desktopie zapisuje się ścieżka; na Androidzie działa wątek roboczy z WASM (niesprawdzone na urządzeniu).
 
+Test na prawdziwych plikach (22.11.2026; pliki lokalnie w `test_gml/`, poza repozytorium): EGiB 206 MB (156 tys. obiektów, zanonimizowany), GESUT 88 MB i 183 MB (eksport EWMAPA), trzy małe pliki BDOT500 z łukami i okręgami:
+
+- wszystkie pliki: odczyt bez błędów i zapis bajt w bajt; natywnie 206 MB w 3,2–3,7 s, 183 MB w 3,4–3,9 s; w przeglądarce 206 MB w ok. 9 s, najdłuższa blokada interfejsu 0,3 s;
+- dodane po teście: okrąg `gml:CircleByCenterPoint` (studzienki i komory z EWMAPA, wcześniej 1595 błędów geometrii), atrybut `RodzajObiektu` pisany wielką literą (OT_SportIRekreacja), budynek podziemny tylko przy kondygnacjach podziemnych bez nadziemnych (0 i 0 to brak danych), opisy rzędnych GESUT i adresów nieruchomości;
+- teksty kartograficzne z `PrezentacjaGraficzna` (21–64 tys. na plik): treść, położenie, justyfikacja i obrót z pliku zamiast automatycznych etykiet; same obiekty prezentacji nie są rysowane jako symbole; gdy brak `tekst`, treść z `nazwaAtrybutu` albo etykiety obiektu opisywanego;
+- obrót tekstów: radiany przeciwnie do ruchu wskazówek zegara od osi wschodniej, sprawdzone na danych (97% numerów adresowych równoległych do krawędzi budynku z dokładnością 5°); justyfikacja przyjęta jak na klawiaturze numerycznej (7 lewy górny, 3 prawy dolny), do potwierdzenia w dokumentacji;
+- narzędzia: `tools/anonimizuj_gml.py` (dane osobowe na zastępniki, reszta pliku bez zmian) i `cargo run --release -p pikieta-gml --example gml_check -- plik.gml` (czasy, zapis bajt w bajt, klasy, kody znaków, teksty, uwagi walidacji).
+
 Do zamknięcia etapu:
 
-- test na prawdziwym pliku EGiB z ośrodka dokumentacji (zanonimizowanym), w tym wydajność dla dużych plików;
-- profile GESUT i BDOT500: style są, do sprawdzenia na prawdziwych plikach (etykiety, rozpoznawanie sieci);
+- potwierdzić znaczenie justyfikacji 1–9 i reguły „kontroli typu geometrii” z pliku testowego BDOT500 (obiekty z `gml:ArcString` oznaczone jako błędne, te same punkty w `LineStringSegment` jako poprawne);
+- test w aplikacji desktopowej (exe) na tych samych plikach;
 - walidacja względem schematów XSD tylko w zakresie reguł, bez pełnego walidatora.
 
 ## Stan etapu 4a

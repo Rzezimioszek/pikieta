@@ -20,7 +20,8 @@ import { Circle, Fill, Stroke, Style, Text } from 'ol/style'
 import { GmlGpu } from './glrender'
 import { timed } from './perf'
 import { forEachSpan, parts, type Decoded } from './gmlbuf'
-import { pickPriority, styleOf, type ClassStyle, type Rgba } from './gmlstyle'
+import type { CartoText } from './gml-engine'
+import { pickPriority, styleOf, textStyle, type ClassStyle, type Rgba } from './gmlstyle'
 
 export interface GmlLayerData {
   decoded: Decoded
@@ -31,6 +32,16 @@ export interface GmlLayerData {
   /** Kody znaków umownych (słownik) i numer kodu dla każdego obiektu. */
   codes: string[]
   code: ArrayLike<number>
+  /** Teksty kartograficzne z pliku; zastępują automatyczne etykiety opisywanych obiektów. */
+  texts?: CartoText[]
+}
+
+/** Wyrównanie tekstu z justyfikacji 1–9 (układ klawiatury numerycznej: 7 lewy górny, 3 prawy dolny). */
+function alignOf(j: number): [CanvasTextAlign, CanvasTextBaseline] {
+  if (j < 1 || j > 9) return ['center', 'middle']
+  const col = (j - 1) % 3
+  const row = Math.floor((j - 1) / 3)
+  return [(['left', 'center', 'right'] as const)[col], (['bottom', 'middle', 'top'] as const)[row]]
 }
 
 const css = (c: Rgba) =>
@@ -254,6 +265,31 @@ export class GmlMapLayers {
   private labelStyle(f: Feature, res: number): Style | undefined {
     const s = f.get('style') as ClassStyle
     if (!s.label || res > s.label.maxRes || res > s.maxRes) return undefined
+    const carto = f.get('carto') as { j: number; a: number } | undefined
+    if (carto) {
+      // Tekst z pliku: położenie, wyrównanie i obrót jak na mapie zasadniczej.
+      const [align, baseline] = alignOf(carto.j)
+      const key = `c|${css(s.label.color)}|${s.label.font}|${align}|${baseline}`
+      let st = this.labelStyles.get(key)
+      if (!st) {
+        st = new Style({
+          text: new Text({
+            font: s.label.font,
+            textAlign: align,
+            textBaseline: baseline,
+            fill: new Fill({ color: css(s.label.color) }),
+            stroke: HALO,
+            overflow: true,
+          }),
+        })
+        this.labelStyles.set(key, st)
+      }
+      const t = st.getText()!
+      t.setText(f.get('label'))
+      // OpenLayers obraca zgodnie z ruchem wskazówek zegara.
+      t.setRotation(-carto.a)
+      return st
+    }
     const pt = !!f.get('pt')
     const key = `${css(s.label.color)}|${s.label.font}|${pt}`
     let st = this.labelStyles.get(key)
@@ -288,8 +324,8 @@ export class GmlMapLayers {
         const cls = data.classes[c]
         groups.set(key, (g = { cls, style: styleOf(cls, data.codes?.[k] ?? '', v), list: [] }))
       }
-      g.list.push(i)
       styles[i] = g.style
+      if (g.style.maxRes >= 0) g.list.push(i)
     }
     timed('GPU: bufory warstwy', () => this.gpu.set(id, d, [...groups.values()], visible, hidden))
     const index = timed('indeks przestrzenny', () => new GridIndex(d))
@@ -310,13 +346,34 @@ export class GmlMapLayers {
   private buildLabels(id: string, entry: Entry) {
     const { data, styles } = entry
     const d = data.decoded
+    const texts = data.texts ?? []
+    const described = new Set<number>()
+    for (const t of texts) if (t.t !== null) described.add(t.t)
     let i = 0
+    let k = 0
     const step = () => {
       if (this.entries.get(id) !== entry) return
+      const endText = Math.min(texts.length, k + 20000)
+      for (; k < endText; k++) {
+        const t = texts[k]
+        const target = t.t ?? t.f
+        const f = new Feature(new Point([t.x, t.y]))
+        f.setProperties(
+          {
+            label: t.s,
+            style: textStyle(styles[target]),
+            cls: data.classes[data.cls[target]],
+            key: `${id}:${target}`,
+            carto: { j: t.j, a: t.a },
+          },
+          true,
+        )
+        entry.labels.push(f)
+      }
       const end = Math.min(d.count, i + 20000)
       for (; i < end; i++) {
         const s = styles[i]
-        if (!s.label || !data.labels[i]) continue
+        if (!s.label || !data.labels[i] || described.has(i)) continue
         const at = labelAnchor(d, i)
         if (!at) continue
         const f = new Feature(new Point(at))
@@ -334,7 +391,7 @@ export class GmlMapLayers {
         )
         entry.labels.push(f)
       }
-      if (i < d.count) setTimeout(step)
+      if (i < d.count || k < texts.length) setTimeout(step)
       else this.refreshLabels()
     }
     setTimeout(step)
