@@ -85,6 +85,39 @@ export function polygonArea(epsg: number, pts: XY[]): { grid: number; ellipsoida
   return r ? { grid: r[0], ellipsoidal: r[1] } : null
 }
 
+export interface TraverseOut {
+  /** Wierzchołki od początkowego (zamknięty bez powtórzenia początku). */
+  points: XY[]
+  /** Azymuty boków po wyrównaniu [g]. */
+  azimuths: number[]
+  angleCorrections: number[]
+  dxCorrections: number[]
+  dyCorrections: number[]
+  angularMisclosure: number | null
+  fx: number | null
+  fy: number | null
+  length: number
+}
+
+const TRAVERSE_KIND = { connected: 0, closed: 1, open: 2 } as const
+
+/** Ciąg poligonowy z wyrównaniem przybliżonym (rdzeń). Kąty w gradach. Rzuca wyjątek z opisem błędu. */
+export function traverse(
+  kind: keyof typeof TRAVERSE_KIND,
+  known: { back: XY; start: XY; end?: XY; forward?: XY },
+  anglesGrad: number[],
+  distances: number[],
+  right: boolean,
+): TraverseOut {
+  const k = [known.back, known.start, known.end, known.forward].flatMap((p) => (p ? [p.x, p.y] : [NaN, NaN]))
+  const r = JSON.parse(
+    w.traverse(TRAVERSE_KIND[kind], new Float64Array(k), new Float64Array(anglesGrad), new Float64Array(distances), right),
+  )
+  const pts: XY[] = []
+  for (let i = 0; i < r.points.length; i += 2) pts.push({ x: r.points[i], y: r.points[i + 1] })
+  return { ...r, points: pts }
+}
+
 export function parsePoints(text: string, yx: boolean): { points: Pt[]; errors: string[] } {
   const r = w.parse_points(text, yx)
   const [ids, coords, codes, errors] = [r.ids, r.coords, r.codes, r.errors]

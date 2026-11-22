@@ -15,6 +15,7 @@
   import LineInt from './calcs/LineInt.svelte'
   import Offset from './calcs/Offset.svelte'
   import Polar from './calcs/Polar.svelte'
+  import Traverse from './calcs/Traverse.svelte'
   import type { Sketch } from './map'
   import { closeCalc, findCalc, picker, project, startCalc, ui } from './project.svelte'
 
@@ -39,6 +40,7 @@
     distInt: DistInt,
     lineInt: LineInt,
     area: Area,
+    traverse: Traverse,
   }
 
   const session = $derived(ui.active?.kind === 'calc' ? findCalc(ui.active.id) : undefined)

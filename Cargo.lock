@@ -2435,6 +2435,7 @@ dependencies = [
  "pikieta-gml",
  "pikieta-io",
  "pikieta-report",
+ "serde_json",
  "wasm-bindgen",
 ]
 

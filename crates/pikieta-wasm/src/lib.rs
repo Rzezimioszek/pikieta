@@ -331,3 +331,54 @@ pub fn points_to_gml(
         .collect();
     pikieta_gml::points_to_gml(&points, epsg, decimals)
 }
+
+/// Ciąg poligonowy z wyrównaniem przybliżonym.
+///
+/// `kind`: 0 dwustronnie nawiązany, 1 zamknięty, 2 wiszący. `known` to `[x, y]` kolejno: nawiązanie
+/// początkowe, punkt początkowy, punkt końcowy, nawiązanie końcowe (dwa ostatnie tylko dla
+/// dwustronnie nawiązanego; inaczej NaN). Kąty w gradach. Zwraca JSON z punktami, azymutami
+/// i poprawkami (kąty w gradach) albo błąd z opisem.
+#[wasm_bindgen]
+pub fn traverse(
+    kind: u8,
+    known: &[f64],
+    angles_grad: &[f64],
+    distances: &[f64],
+    right_angles: bool,
+) -> Result<String, JsError> {
+    use pikieta_calc::TraverseKind;
+    let at = |i: usize| -> Option<Point2> {
+        let (x, y) = (*known.get(2 * i)?, *known.get(2 * i + 1)?);
+        (x.is_finite() && y.is_finite()).then(|| Point2::new(x, y))
+    };
+    let kind = match kind {
+        0 => TraverseKind::Connected,
+        1 => TraverseKind::Closed,
+        2 => TraverseKind::Open,
+        _ => return Err(JsError::new("nieznany rodzaj ciągu")),
+    };
+    let t = pikieta_calc::Traverse {
+        kind,
+        back: at(0).ok_or_else(|| JsError::new("brak punktu nawiązania"))?,
+        start: at(1).ok_or_else(|| JsError::new("brak punktu początkowego"))?,
+        end: at(2),
+        forward: at(3),
+        angles: angles_grad.iter().map(|a| grad_to_rad(*a)).collect(),
+        distances: distances.to_vec(),
+        right_angles,
+    };
+    let r = pikieta_calc::traverse(&t).map_err(|e| JsError::new(&e))?;
+    let grads = |v: &[f64]| v.iter().map(|a| rad_to_grad(*a)).collect::<Vec<_>>();
+    Ok(serde_json::json!({
+        "points": r.points.iter().flat_map(|p| [p.x, p.y]).collect::<Vec<_>>(),
+        "azimuths": grads(&r.azimuths),
+        "angleCorrections": grads(&r.angle_corrections),
+        "dxCorrections": r.dx_corrections,
+        "dyCorrections": r.dy_corrections,
+        "angularMisclosure": r.angular_misclosure.map(rad_to_grad),
+        "fx": r.misclosure.map(|m| m.0),
+        "fy": r.misclosure.map(|m| m.1),
+        "length": r.length,
+    })
+    .to_string())
+}

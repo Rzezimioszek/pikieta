@@ -2,7 +2,7 @@
 import type { IconName } from './icons'
 import type { CalcSession } from './project.svelte'
 
-export type CalcType = 'azimuth' | 'polar' | 'offset' | 'fromOffset' | 'distInt' | 'lineInt' | 'area'
+export type CalcType = 'azimuth' | 'polar' | 'offset' | 'fromOffset' | 'distInt' | 'lineInt' | 'area' | 'traverse'
 
 export interface AzimuthData {
   rows: { from: string; to: string }[]
@@ -39,6 +39,21 @@ export interface LineIntData {
 }
 export interface AreaData {
   rows: { id: string }[]
+}
+export interface TraverseData {
+  /** Dwustronnie nawiązany, zamknięty albo wiszący. */
+  kind: 'connected' | 'closed' | 'open'
+  /** Kąty lewe albo prawe. */
+  angles: 'left' | 'right'
+  back: string
+  forward: string
+  /** Redukcja odwzorowawcza długości (skala odwzorowania boku). */
+  reduce: 'yes' | 'no'
+  /** Błąd średni pomiaru kąta [cc] do odchyłki dopuszczalnej; puste: bez sprawdzania. */
+  mAngle: string
+  /** Dopuszczalna odchyłka względna 1 : N; puste: bez sprawdzania. */
+  relLimit: string
+  rows: { id: string; angle: string; dist: string }[]
 }
 
 export interface CalcInfo {
@@ -111,6 +126,26 @@ export const CALCS: Record<CalcType, CalcInfo> = {
         ? `Przecięcie ${d.a.trim()}–${d.b.trim()} × ${d.c.trim()}–${d.d.trim()}`
         : 'Przecięcie prostych',
   },
+  traverse: {
+    label: 'Ciąg poligonowy',
+    short: 'Ciąg',
+    icon: 'traverse',
+    hint: 'Ciąg dwustronnie nawiązany, zamknięty lub wiszący z wyrównaniem przybliżonym.',
+    init: (): TraverseData => ({
+      kind: 'connected',
+      angles: 'left',
+      back: '',
+      forward: '',
+      reduce: 'no',
+      mAngle: '',
+      relLimit: '',
+      rows: [{ id: '', angle: '', dist: '' }],
+    }),
+    title: (d: TraverseData) => {
+      const ids = d.rows.map((r) => r.id.trim()).filter(Boolean)
+      return ids.length >= 2 ? `Ciąg ${ids[0]}–${ids.at(-1)}` : 'Ciąg poligonowy'
+    },
+  },
   area: {
     label: 'Pole powierzchni',
     short: 'Pole',
@@ -127,6 +162,7 @@ export const CALCS: Record<CalcType, CalcInfo> = {
 
 export const CALC_GROUPS: { label: string; types: CalcType[] }[] = [
   { label: 'Podstawowe', types: ['azimuth', 'polar'] },
+  { label: 'Osnowa', types: ['traverse'] },
   { label: 'Domiary', types: ['offset', 'fromOffset'] },
   { label: 'Wcięcia', types: ['distInt', 'lineInt'] },
   { label: 'Pola', types: ['area'] },

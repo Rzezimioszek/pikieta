@@ -3,3 +3,5 @@ node_modules/
 dist/
 # Wygenerowane wiązania WASM (npm run wasm)
 /app/src/lib/wasm/
+# Instrukcje programów komercyjnych (tylko lokalnie, bez publikacji)
+/inspiracje/

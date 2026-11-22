@@ -41,6 +41,7 @@ export const ICONS = {
   distInt: `${circle(9, 12, 5)}${circle(15, 12, 5)}`,
   lineInt: `M4 4l16 16M20 4 4 20${circle(12, 12, 2)}`,
   area: 'M5 18 7 6l9-2 4 9-6 7z',
+  traverse: `${circle(4, 18, 1.6)}${circle(10, 9, 1.6)}${circle(16, 15, 1.6)}${circle(20, 5, 1.6)}M5 16.6 9 10.4M11.2 10.2l3.6 3.6M16.8 13.5 19.4 6.5`,
   point: circle(12, 12, 3),
   list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
 } satisfies Record<string, string>

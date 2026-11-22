@@ -5,6 +5,9 @@
 use pikieta_core::Point2;
 use std::f64::consts::TAU;
 
+mod traverse;
+pub use traverse::{traverse, Traverse, TraverseKind, TraverseResult};
+
 /// Poniżej tej wartości sinusa kąta między kierunkami proste uznajemy za równoległe.
 const PARALLEL_EPS: f64 = 1e-12;
 

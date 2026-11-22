@@ -22,7 +22,7 @@ Crate'y rdzenia:
 
 - `pikieta-core`: typy punktów, kąty w gradach i stopniach, reguły zaokrągleń, tolerancje.
 - `pikieta-crs`: PL-2000 (EPSG:2176–2179), PL-1992, PL-UTM, ETRF2000 na własnej implementacji Gaussa-Krügera. Układ 1965 i wysokości (Kronsztad86 ↔ EVRF2007, geoida) później, bo wymagają siatek.
-- `pikieta-calc`: azymut i długość, biegunowe, domiary, rzutowanie na prostą, wcięcia i przecięcia, pole ze współrzędnych z poprawką odwzorowawczą, transformacja Helmerta i afiniczna, ciągi poligonowe, niwelacja, tachimetria, tyczenie, podział działek; później wyrównanie metodą najmniejszych kwadratów.
+- `pikieta-calc`: azymut i długość, biegunowe, domiary, rzutowanie na prostą, wcięcia i przecięcia, pole ze współrzędnych z poprawką odwzorowawczą, transformacja Helmerta i afiniczna, ciągi poligonowe, niwelacja, tachimetria, tyczenie, podział działek; później wyrównanie metodą najmniejszych kwadratów, NMT i trasy (pełna lista w „Obliczenia do uzupełnienia”).
 - `pikieta-gml`: odczyt i zapis na `quick-xml`.
 - `pikieta-io` (do dodania): TXT/CSV, DXF, GeoJSON; później formaty instrumentów.
 - `pikieta-project` (do dodania): model projektu, warstwy, undo/redo, indeks przestrzenny, wersjonowany plik projektu.
@@ -49,9 +49,11 @@ Rozmiary to zgrubny szacunek dla jednej osoby na pełny etat.
 | 1 | `pikieta-crs` + podstawowe `pikieta-calc` + CLI | wyniki zgodne co do mm z punktami kontrolnymi GUGiK/PROJ oraz z C-Geo/WinKalk | 4–6 tyg. |
 | 2 | MVP desktop + web | tabela punktów, import/eksport TXT, punkty na mapie, 5–6 zadań z raportem | 6–8 tyg. |
 | 3 | GML | plik EGiB wczytany na mapę i wyeksportowany bez strat | 6–8 tyg. |
-| 4 | Obliczenia zaawansowane + DXF | ciągi, transformacje, podziały, rysowanie ze snappingiem | 8+ tyg. |
+| 4a | Obliczenia terenowe + DXF | ciągi, tachimetria, tyczenie, wcięcia, transformacje płaskie, podziały, wyrównanie pól, rysowanie ze snappingiem | 8+ tyg. |
+| 4b | Wysokości, wyrównanie, instrumenty | niwelacja, transformacje wysokości i 3D, wyrównanie MNK, dzienniki pomiarów | 8+ tyg. |
 | 5 | Android | interfejs terenowy, GNSS z telefonu, praca offline; później odbiorniki RTK po Bluetooth | 4–6 tyg. |
 | 6 | Wydanie | instalator Windows, AppImage/deb, APK, PWA, dokumentacja PL/EN | 2–3 tyg. |
+| 7 | NMT i obliczenia specjalistyczne | model TIN, objętości, warstwice, trasy, przekroje, suwnice | 8+ tyg. |
 
 ## Stan etapu 0
 
@@ -165,6 +167,52 @@ Do zamknięcia etapu:
 - test na prawdziwym pliku EGiB z ośrodka dokumentacji (zanonimizowanym), w tym wydajność dla dużych plików;
 - profile GESUT i BDOT500: style są, do sprawdzenia na prawdziwych plikach (etykiety, rozpoznawanie sieci);
 - walidacja względem schematów XSD tylko w zakresie reguł, bez pełnego walidatora.
+
+## Stan etapu 4a
+
+Etap 3 pozostaje otwarty do sprawdzenia na prawdziwych plikach EGiB, GESUT i BDOT500.
+
+Zrobione (22.11.2026):
+
+- ciąg poligonowy w `pikieta-calc`: dwustronnie nawiązany, zamknięty i wiszący, kąty lewe lub prawe; odchyłka kątowa i odchyłki przyrostów, wyrównanie przybliżone (poprawki kątów po równo, przyrostów proporcjonalnie do długości boków); testy na danych bez błędów, z błędem kąta i boku, kątach prawych, ciągu zamkniętym i wiszącym;
+- zadanie „Ciąg” w grupie Osnowa: wiersze od punktu początkowego (kąt na punkcie, bok do następnego), opcjonalna redukcja odwzorowawcza długości (skala boku z położenia przybliżonego, drugi przebieg), odchyłka kątowa dopuszczalna 2·mα·√n i względna liniowa 1 : N wpisywane przez użytkownika, nowe punkty do projektu, raport z poprawkami i przyrostami.
+
+Następne w etapie 4a: tachimetria, tyczenie, wcięcie wstecz.
+
+## Obliczenia do uzupełnienia
+
+Porównanie z zakresem obliczeń C-Geo (instrukcja użytkownika, tomy I i II, oraz wykaz zmian 2013–2022; pliki są tylko lokalnie, w folderze `inspiracje/` wyłączonym z repozytorium). Pikieta ma dziś: azymut i długość, metodę biegunową, rzutowanie na prostą i punkty z domiarów, wcięcie liniowe, przecięcie prostych i kierunków, pole ze współrzędnych z redukcją na elipsoidę oraz przeliczenia PL-2000/1992/UTM.
+
+Etap 4a, obliczenia terenowe (kolejność według potrzeb w codziennej pracy):
+
+- ciąg poligonowy: dwustronnie nawiązany, zamknięty, wiszący; odchyłki kątowa i liniowa z dopuszczalnymi, wyrównanie przybliżone, redukcje odwzorowawcze długości;
+- tachimetria: stanowisko z orientacją na jeden lub kilka punktów, XYH pikiet, redukcje (odwzorowawcza, na poziom odniesienia, krzywizna i refrakcja), średnia z dwóch położeń lunety;
+- tyczenie: elementy biegunowe (kąt lub azymut i odległość) ze stanowiska z orientacją, także dla wielu punktów naraz, z raportem;
+- wcięcia: wstecz (z trzech punktów), kątowe w przód z kątów pomierzonych na stanowiskach, kombinowane, wcięcie z wyrównaniem przy nadliczbowych obserwacjach, przestrzenne wcięcie w przód (XYH);
+- konstrukcje: prosta prostopadła, równoległa, pod zadanym kątem lub azymutem, przecięcie prostej z okręgiem, punkt ukryty (pomiar mimośrodowy), punkty na łuku kołowym (ze spadkiem), podział odcinka;
+- transformacje płaskie: Helmerta (podobieństwa), afiniczna, z korektą Hausbrandta, raport odchyłek na punktach dostosowania;
+- pola: wyrównanie pól (działka i użytki, rozrzucenie odchyłki), wykaz zmian danych ewidencyjnych na podstawie GML EGiB;
+- podział działki na zadaną powierzchnię: równolegle do boku, z punktu, na równe części, z powtarzaniem kryterium;
+- uśrednianie współrzędnych i porównanie dwóch zbiorów punktów (odchyłki, także z weryfikacją atrybutów, np. kodu);
+- redukcja długości: odwzorowawcza i na poziom terenu jako osobne zadanie (rdzeń już to liczy).
+
+Etap 4b, wysokości, wyrównanie i dane z instrumentów:
+
+- niwelacja techniczna: ciąg nawiązany i zamknięty, punkty pośrednie, odchyłka dopuszczalna; później niwelacja precyzyjna (łaty, poprawki temperaturowe);
+- transformacje wysokości (Kronsztadt86 ↔ EVRF2007, geoida PL-geoid) i przestrzenna 3D (7 parametrów, PL-2000 ↔ XYZ ETRF); wymagają siatek, razem z układem 1965;
+- wyrównanie ścisłe metodą najmniejszych kwadratów: sieci poziome, wysokościowe i 3D/GNSS, wyrównanie swobodne, błędy średnie, elipsy błędów, wykrywanie błędów grubych;
+- dziennik kątów i boków: obserwacje z instrumentów (średnie z serii, redukcje), import do ciągów, tachimetrii i wyrównania;
+- dziennik pomiarów RTK/RTN: uśrednianie powtórzeń, przyrosty, kontrola na punktach osnowy, dopasowanie do osnowy lokalnej.
+
+Etap 7, numeryczny model terenu i zastosowania specjalistyczne (po wydaniu 1.0):
+
+- model TIN z punktów XYH i linii nieciągłości, pole powierzchni 3D, objętości (mas ziemnych, między dwoma modelami, do płaszczyzny), warstwice, przekrój pionowy, rzutowanie punktów na model, mapa spadków;
+- trasy: proste, łuki kołowe, klotoidy, łuki koszowe, łuki pionowe, kilometraż, punkty dodatkowe i kontrolowane, przekroje poprzeczne;
+- rzutowanie pomiarów liniowych na dane projektowe (kontrola realizacji, inwentaryzacja);
+- pomiary torów suwnicowych (wpasowanie, odchyłki, wykresy);
+- kalibracja (wpasowanie) rastra na mapie.
+
+Poza zakresem obliczeń, ale z tych samych instrukcji: kontrola spójności i topologii mapy, transformacja całej mapy, przecięcie warstw.
 
 ## Ryzyka
 
