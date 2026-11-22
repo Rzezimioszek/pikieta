@@ -12,6 +12,9 @@ export interface GmlIndex {
   geom: number[]
   /** Wariant stylu (bity `VARIANT_*`), np. punkt graniczny dokładny lub stabilizowany. */
   variant: number[]
+  /** Kody znaków umownych mapy zasadniczej (słownik) i numer kodu dla obiektu. */
+  codes: string[]
+  code: number[]
   epsg: number | null
   /** Błędy geometrii: numer obiektu → opis. */
   errors: Record<string, string>

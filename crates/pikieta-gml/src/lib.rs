@@ -34,9 +34,11 @@ pub struct Feature {
     pub id: String,
     /// Krótka etykieta do mapy, np. numer działki.
     pub label: String,
-    /// Wariant stylu wynikający z atrybutów (bity [`VARIANT_ACCURATE`], [`VARIANT_STABILIZED`],
-    /// [`VARIANT_PLANNED`]).
+    /// Wariant stylu wynikający z atrybutów (bity `VARIANT_*`).
     pub variant: u8,
+    /// Kod znaku umownego mapy zasadniczej (Dz.U. 2021 poz. 1385, zał. 4), np. `EGDE`, `SUWP`, `OTKJ`;
+    /// pusty, gdy obiekt nie ma znaku w katalogu.
+    pub code: String,
     pub geometry: Option<Geometry>,
     pub geometry_error: Option<String>,
     /// `srsName` geometrii.
@@ -195,14 +197,15 @@ impl GmlDocument {
         // Etykieta i wariant stylu zależą od atrybutów, więc liczymy je od nowa.
         let class = self.features[feature].class.clone();
         if let Some(el) = self.element(feature) {
-            let (label, variant) = describe(&class, el);
+            let d = describe(&class, el);
             let f = &mut self.features[feature];
-            f.label = if label.is_empty() {
+            f.label = if d.label.is_empty() {
                 f.id.clone()
             } else {
-                label
+                d.label
             };
-            f.variant = variant;
+            f.variant = d.variant;
+            f.code = d.code;
         }
         Ok(())
     }
@@ -239,6 +242,7 @@ impl GmlDocument {
                 id: gml_id(el).unwrap_or_default(),
                 label: String::new(),
                 variant: 0,
+                code: String::new(),
                 geometry: None,
                 geometry_error: None,
                 srs: None,
@@ -260,7 +264,8 @@ impl GmlDocument {
                     }
                 }
             }
-            (f.label, f.variant) = describe(&f.class, el);
+            let d = describe(&f.class, el);
+            (f.label, f.variant, f.code) = (d.label, d.variant, d.code);
             if f.label.is_empty() {
                 f.label = f.id.clone();
             }
@@ -557,6 +562,10 @@ pub const VARIANT_ACCURATE: u8 = 1;
 pub const VARIANT_STABILIZED: u8 = 2;
 /// Obiekt GESUT o statusie „projektowany”.
 pub const VARIANT_PLANNED: u8 = 4;
+/// Budynek podziemny (bez kondygnacji nadziemnych).
+pub const VARIANT_UNDERGROUND: u8 = 8;
+/// Przewód GESUT nadziemny (napowietrzny).
+pub const VARIANT_OVERHEAD: u8 = 16;
 
 fn child_text(el: &Element, name: &str) -> String {
     el.child(name)
@@ -565,9 +574,16 @@ fn child_text(el: &Element, name: &str) -> String {
         .unwrap_or_default()
 }
 
-/// Etykieta i wariant stylu obiektu według usług WMS z rozporządzeń
-/// (EGiB: załącznik nr 8; GESUT: status projektowany).
-fn describe(class: &str, el: &Element) -> (String, u8) {
+struct Described {
+    label: String,
+    variant: u8,
+    code: String,
+}
+
+/// Etykieta, wariant stylu i kod znaku umownego obiektu według katalogu znaków mapy zasadniczej
+/// (Dz.U. 2021 poz. 1385, zał. 4). Kody powstają z klasy i atrybutu rodzaju, tak jak w katalogu:
+/// BDOT500 `OT` + litera grupy + rodzaj, GESUT `SU` + sieć + rodzaj urządzenia, EGiB `EG..`.
+fn describe(class: &str, el: &Element) -> Described {
     let t = |n: &str| child_text(el, n);
     let id_label = || {
         LABEL_KEYS
@@ -578,29 +594,147 @@ fn describe(class: &str, el: &Element) -> (String, u8) {
             })
             .unwrap_or_default()
     };
-    match class {
+    let mut variant = 0;
+    let label = match class {
         "EGB_PunktGraniczny" => {
-            let mut v = 0;
             if t("sposobPozyskania") == "1" && t("spelnienieWarunkowDokl") == "1" {
-                v |= VARIANT_ACCURATE;
+                variant |= VARIANT_ACCURATE;
             }
             if matches!(t("rodzajStabilizacji").as_str(), "3" | "4" | "5" | "6") {
-                v |= VARIANT_STABILIZED;
+                variant |= VARIANT_STABILIZED;
             }
-            (id_label(), v)
+            id_label()
         }
-        // Opis budynku: funkcja (rodzaj wg KŚT) i liczba kondygnacji, np. „m3”.
-        "EGB_Budynek" => (
-            format!("{}{}", t("rodzajWgKST"), t("liczbaKondygnacjiNadziemnych")),
-            0,
-        ),
-        "EGB_KonturUzytkuGruntowego" => (t("OFU"), 0),
-        "EGB_KonturKlasyfikacyjny" => (format!("{}{}", t("OZU"), t("OZK")), 0),
+        // Opis budynku: rodzaj wg KŚT i numer najwyższej kondygnacji nadziemnej, np. „m3”.
+        "EGB_Budynek" | "OT_BudynekNiewykazanyWEGIB" => {
+            let above = t("liczbaKondygnacjiNadziemnych");
+            if above.parse::<i64>().is_ok_and(|n| n == 0) {
+                variant |= VARIANT_UNDERGROUND;
+            }
+            let kst = if class == "EGB_Budynek" {
+                t("rodzajWgKST")
+            } else {
+                t("rodzajKST")
+            };
+            format!("{kst}{above}")
+        }
+        // Pikiety BDOT500 opisane wysokością.
+        "OT_Rzedna" => t("rzedna"),
+        "EGB_KonturUzytkuGruntowego" => t("OFU"),
+        "EGB_KonturKlasyfikacyjny" => format!("{}{}", t("OZU"), t("OZK")),
         c if c.starts_with("GES_") => {
             let planned = t("status") == "p";
-            (id_label(), if planned { VARIANT_PLANNED } else { 0 })
+            if planned {
+                variant |= VARIANT_PLANNED;
+            }
+            if t("przebieg") == "n" {
+                variant |= VARIANT_OVERHEAD;
+            }
+            match gesut_network(c) {
+                Some(net) if c.starts_with("GES_Przewod") => {
+                    conduit_label(net, &t, planned, variant)
+                }
+                Some(net) if planned => format!("proj. {}", net.to_ascii_lowercase()),
+                _ => id_label(),
+            }
         }
-        _ => (id_label(), 0),
+        _ => id_label(),
+    };
+    Described {
+        label,
+        variant,
+        code: symbol_code(class, &t),
+    }
+}
+
+/// Litera sieci uzbrojenia w kodach znaków: W, K, E, G, C, T, S, N.
+fn gesut_network(class: &str) -> Option<char> {
+    const NETS: [(&str, char); 8] = [
+        ("Wodociag", 'W'),
+        ("Kanalizac", 'K'),
+        ("Elektroenerget", 'E'),
+        ("Gaz", 'G'),
+        ("Cieplow", 'C'),
+        ("Telekomunik", 'T'),
+        ("Specjaln", 'S'),
+        ("Niezidentyfikowan", 'N'),
+    ];
+    NETS.iter()
+        .find(|(k, _)| class.contains(k))
+        .map(|&(_, c)| c)
+}
+
+/// Opis przewodu (zał. 4, rozdz. 1 ust. 5–6): rodzaj sieci, typ i średnica, np. „w150”, „kd200”;
+/// przewody projektowane z dopiskiem „proj.”, nadziemne elektroenergetyczne i telekomunikacyjne bez opisu.
+fn conduit_label(net: char, t: &dyn Fn(&str) -> String, planned: bool, variant: u8) -> String {
+    if variant & VARIANT_OVERHEAD != 0 && matches!(net, 'E' | 'T') {
+        return String::new();
+    }
+    let mut s = String::from(net.to_ascii_lowercase());
+    let typ = t("typPrzewodu");
+    if !(net == 'T' && typ == "i") {
+        s.push_str(&typ);
+    }
+    s.push_str(&t("srednica"));
+    if t("eksploatacja") == "n" {
+        s.push_str("-niecz.");
+    }
+    if planned {
+        s = format!("proj. {s}");
+    }
+    s
+}
+
+/// Kod znaku umownego z katalogu mapy zasadniczej. Jeśli plik podaje `kodObiektu`, ma on pierwszeństwo.
+fn symbol_code(class: &str, t: &dyn Fn(&str) -> String) -> String {
+    let given = t("kodObiektu");
+    if given.len() == 4 && given.bytes().all(|b| b.is_ascii_uppercase()) {
+        return given;
+    }
+    let sub = |prefix: &str, attr: &str| match t(attr).as_bytes() {
+        [b] if b.is_ascii_alphabetic() => format!("{prefix}{}", b.to_ascii_uppercase() as char),
+        _ => String::new(),
+    };
+    match class {
+        "EGB_JednostkaEwidencyjna" => "EGJE".into(),
+        "EGB_ObrebEwidencyjny" => "EGOE".into(),
+        "EGB_DzialkaEwidencyjna" => "EGDE".into(),
+        "EGB_PunktGraniczny" => "EGPG".into(),
+        "EGB_KonturUzytkuGruntowego" => "EGUG".into(),
+        "EGB_KonturKlasyfikacyjny" => "EGKK".into(),
+        "EGB_Budynek" => "EGBU".into(),
+        "OT_BudynekNiewykazanyWEGIB" => if t("status") == "b" { "OTBB" } else { "OTBU" }.into(),
+        "EGB_BlokBudynku" => sub("EGB", "rodzajBloku"),
+        "EGB_ObiektTrwaleZwiazanyZBudynkiem" => sub("EGB", "rodzajObiektuZwiazanegoZBudynkiem"),
+        "OT_BlokBudynku" => sub("OTB", "rodzajBloku"),
+        "OT_ObiektTrwaleZwiazanyZBudynkami" => sub("OTB", "rodzajObiektu"),
+        "OT_Budowle" => sub("OTD", "rodzajBudowli"),
+        "OT_Ogrodzenia" => sub("OTO", "rodzajOgrodzenia"),
+        "OT_Komunikacja" => sub("OTK", "rodzajObiektu"),
+        "OT_SportIRekreacja" => sub("OTS", "rodzajObiektu"),
+        "OT_ZagospodarowanieTerenu" => sub("OTZ", "rodzajObiektu"),
+        "OT_Wody" => sub("OTW", "rodzajObiektu"),
+        "OT_Skarpa" => sub("OTR", "rodzajSkarpy"),
+        "OT_Rzedna" => sub("OTR", "rodzajRzednej"),
+        "GES_UrzadzeniaTechniczneSieciSpecjalnej" => "SUSU".into(),
+        "GES_UrzadzenieNiezidentyfikowane" => "SUNU".into(),
+        "GES_InneUrzadzeniaTowarzyszace" => sub("SUP", "rodzajUrzadzenia"),
+        "GES_UrzadzeniaTowarzyszczaceLiniowe" => sub("SUL", "rodzajUrzadzenia"),
+        c if c.starts_with("GES_Przewod") => gesut_network(c)
+            .map(|n| format!("SU{n}P"))
+            .unwrap_or_default(),
+        c if c.starts_with("GES_UrzadzeniaSiec") => match gesut_network(c) {
+            Some(n) => {
+                let code = sub(&format!("SU{n}"), "rodzajUrzadzenia");
+                if code.is_empty() {
+                    format!("SU{n}U")
+                } else {
+                    code
+                }
+            }
+            None => String::new(),
+        },
+        _ => String::new(),
     }
 }
 

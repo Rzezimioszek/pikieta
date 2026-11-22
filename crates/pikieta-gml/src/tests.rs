@@ -250,3 +250,59 @@ fn labels_and_style_variants_follow_egib_wms_rules() {
     d3.set_property(i, "sposobPozyskania", "1").unwrap();
     assert_eq!(d3.features[i].variant, VARIANT_ACCURATE);
 }
+
+#[test]
+fn symbol_codes_follow_base_map_catalogue() {
+    let d = doc();
+    assert_eq!(find(&d, "TEST.Bud.1").code, "EGBU");
+    assert_eq!(find(&d, "TEST.KU.1").code, "EGUG");
+    assert_eq!(find(&d, "TEST.PG.1").code, "EGPG");
+
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<gml:FeatureCollection xmlns:gml="http://www.opengis.net/gml/3.2"
+  xmlns:ges="urn:gugik:specyfikacje:gmlas:bazaDanychObiektowTopograficznych500:1.0"
+  xmlns:ot="urn:gugik:specyfikacje:gmlas:bazaDanychObiektowTopograficznych500:1.0" gml:id="k">
+  <gml:featureMember>
+    <ges:GES_PrzewodWodociagowy gml:id="w1">
+      <ges:status>p</ges:status><ges:typPrzewodu>r</ges:typPrzewodu><ges:srednica>150</ges:srednica>
+      <ges:geometria><gml:LineString gml:id="g1" srsName="EPSG:2178"><gml:posList>0 0 1 1</gml:posList></gml:LineString></ges:geometria>
+    </ges:GES_PrzewodWodociagowy>
+  </gml:featureMember>
+  <gml:featureMember>
+    <ges:GES_PrzewodElektroenergetyczny gml:id="e1">
+      <ges:status>i</ges:status><ges:przebieg>n</ges:przebieg>
+      <ges:geometria><gml:LineString gml:id="g2" srsName="EPSG:2178"><gml:posList>0 0 1 1</gml:posList></gml:LineString></ges:geometria>
+    </ges:GES_PrzewodElektroenergetyczny>
+  </gml:featureMember>
+  <gml:featureMember>
+    <ges:GES_UrzadzeniaSiecKanalizacyjna gml:id="k1">
+      <ges:status>i</ges:status><ges:rodzajUrzadzenia>s</ges:rodzajUrzadzenia>
+      <ges:geometria><gml:Point gml:id="g3" srsName="EPSG:2178"><gml:pos>0 0</gml:pos></gml:Point></ges:geometria>
+    </ges:GES_UrzadzeniaSiecKanalizacyjna>
+  </gml:featureMember>
+  <gml:featureMember>
+    <ot:OT_Komunikacja gml:id="j1">
+      <ot:rodzajObiektu>j</ot:rodzajObiektu>
+      <ot:geometria><gml:Point gml:id="g4" srsName="EPSG:2178"><gml:pos>0 0</gml:pos></gml:Point></ot:geometria>
+    </ot:OT_Komunikacja>
+  </gml:featureMember>
+  <gml:featureMember>
+    <ot:OT_Budowle gml:id="d1">
+      <ot:kodObiektu>OTDA</ot:kodObiektu><ot:rodzajBudowli>i</ot:rodzajBudowli>
+      <ot:geometria><gml:Point gml:id="g5" srsName="EPSG:2178"><gml:pos>0 0</gml:pos></gml:Point></ot:geometria>
+    </ot:OT_Budowle>
+  </gml:featureMember>
+</gml:FeatureCollection>"#;
+    let d = GmlDocument::parse(xml).unwrap();
+    let w = find(&d, "w1");
+    assert_eq!((w.code.as_str(), w.label.as_str()), ("SUWP", "proj. wr150"));
+    assert_eq!(w.variant, VARIANT_PLANNED);
+    let e = find(&d, "e1");
+    assert_eq!((e.code.as_str(), e.variant), ("SUEP", VARIANT_OVERHEAD));
+    // Nadziemne przewody elektroenergetyczne nie mają opisu, więc etykietą jest gml:id.
+    assert_eq!(e.label, "e1");
+    assert_eq!(find(&d, "k1").code, "SUKS");
+    assert_eq!(find(&d, "j1").code, "OTKJ");
+    // Kod podany w pliku ma pierwszeństwo.
+    assert_eq!(find(&d, "d1").code, "OTDA");
+}

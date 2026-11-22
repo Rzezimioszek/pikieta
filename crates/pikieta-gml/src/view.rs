@@ -158,6 +158,19 @@ impl GmlDocument {
                 })
             })
             .collect();
+        // Kody znaków umownych jako słownik i numer na obiekt.
+        let mut codes: Vec<&str> = Vec::new();
+        let mut code_ix: HashMap<&str, usize> = HashMap::new();
+        let code: Vec<usize> = self
+            .features
+            .iter()
+            .map(|f| {
+                *code_ix.entry(f.code.as_str()).or_insert_with(|| {
+                    codes.push(f.code.as_str());
+                    codes.len() - 1
+                })
+            })
+            .collect();
         let errors: serde_json::Map<String, Value> = self
             .features
             .iter()
@@ -171,6 +184,8 @@ impl GmlDocument {
             "id": self.features.iter().map(|f| f.id.as_str()).collect::<Vec<_>>(),
             "geom": self.features.iter().map(|f| geom_code(f.geometry.as_ref())).collect::<Vec<_>>(),
             "variant": self.features.iter().map(|f| f.variant).collect::<Vec<_>>(),
+            "codes": codes,
+            "code": code,
             "epsg": self.epsg(),
             "errors": errors,
         })

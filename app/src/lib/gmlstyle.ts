@@ -1,12 +1,11 @@
-// Style obiektów GML według rozporządzeń (folder isap):
-// - EGiB: rozporządzenie w sprawie ewidencji gruntów i budynków (tekst jednolity Dz.U. 2024 poz. 219),
-//   załącznik nr 8, tabela nr 1: style usług WMS (kolory RGB, grubości w px, przerywania, zakresy skal);
-// - GESUT: rozporządzenie w sprawie GESUT (Dz.U. 2021 poz. 1374), załącznik nr 3: linie 1 px z białym halo 1 px,
-//   w skalach 0,5–0,1 px/m linie 2 px z halo 2 px; kolory sieci z katalogu znaków mapy zasadniczej;
-// - BDOT500: rozporządzenie w sprawie BDOT500 i mapy zasadniczej (Dz.U. 2021 poz. 1385), załącznik nr 4:
-//   kolory i grubości znaków (mm w skali 1:500 przeliczone na px, 1 mm ≈ 3,8 px przy 96 dpi).
-// Zakresy skal w rozporządzeniach podane są w px/m; tu jako rozdzielczość w m/px (odwrotność).
-import { VARIANT_ACCURATE, VARIANT_PLANNED, VARIANT_STABILIZED } from './gmlvariants'
+// Style obiektów GML (EGiB, GESUT, BDOT500) według katalogu znaków umownych mapy zasadniczej:
+// rozporządzenie w sprawie BDOT500 oraz mapy zasadniczej (Dz.U. 2021 poz. 1385), załącznik nr 4.
+// Znaki są zdefiniowane w milimetrach dla skali 1 : 500; na ekranie 1 mm = 96 / 25,4 px (jak w CSS),
+// a linie i symbole mają najmniejszą czytelną grubość lub promień.
+// Kod znaku (np. EGDE, SUWP, OTKJ) wylicza rdzeń z klasy i atrybutu rodzaju albo z `kodObiektu`.
+// Znaki złożone (kreski poprzeczne skarp, szrafy, symbole drzew i urządzeń) są uproszczone
+// do linii, przerywania i koła; kolory, grubości, przerywania i kolejność są z rozporządzenia.
+import { VARIANT_OVERHEAD, VARIANT_PLANNED, VARIANT_STABILIZED, VARIANT_UNDERGROUND } from './gmlvariants'
 
 export type Rgba = [number, number, number, number]
 
@@ -14,11 +13,11 @@ export interface LineStyle {
   color: Rgba
   /** Grubość w px (CSS). */
   width: number
-  /** Kreska i odstęp w px. */
-  dash?: [number, number]
+  /** Wzór przerywania w px: kreska, odstęp[, kreska, odstęp]. */
+  dash?: number[]
   /** Biała obwódka (halo) w px z każdej strony. */
   halo?: number
-  /** Grubość i halo przy oddaleniu (rozdzielczość powyżej `farRes`). */
+  /** Grubość i halo przy oddaleniu (rozdzielczość powyżej `res`). */
   far?: { res: number; width: number; halo?: number }
 }
 
@@ -54,118 +53,201 @@ export interface ClassStyle {
 const rgb = (r: number, g: number, b: number, a = 1): Rgba => [r / 255, g / 255, b / 255, a]
 const BLACK = rgb(0, 0, 0)
 const WHITE = rgb(255, 255, 255)
-const label = (color: Rgba, maxRes: number, font = '12px sans-serif'): LabelStyle => ({ color, maxRes, font })
 
-/** 0,1 px/m z rozporządzeń, czyli do 10 m/px. */
-const RES_FAR = 10
+/** Piksele CSS na milimetr. */
+const MM = 96 / 25.4
+const px = (mm: number) => mm * MM
+/** Grubość linii znaku [mm] na ekranie, co najmniej 1 px. */
+const lw = (mm: number) => Math.max(1, px(mm))
+/** Biała obwódka, żeby czarne linie były widoczne na ortofotomapie (dodatek ekranowy, nie część znaku). */
+const HALO = 0.5
 
-// --- EGiB: załącznik nr 8, tabela nr 1 (kolejność na mapie: 1 = na wierzchu, 10 = na spodzie) ---
-const EGIB: Record<string, (variant: number) => ClassStyle> = {
-  EGB_KonturUzytkuGruntowego: () => ({
-    order: 0,
-    maxRes: RES_FAR,
-    line: { color: rgb(0, 0, 128), width: 1, dash: [5, 5] },
-    label: label(rgb(0, 0, 128), 0.7),
-  }),
-  EGB_KonturKlasyfikacyjny: () => ({
-    order: 2,
-    maxRes: RES_FAR,
-    line: { color: rgb(36, 188, 36), width: 1, dash: [9, 7] },
-    label: label(rgb(36, 188, 36), 0.7),
-  }),
-  EGB_DzialkaEwidencyjna: () => ({
-    order: 4,
-    maxRes: RES_FAR,
-    line: { color: rgb(64, 160, 255), width: 1 },
-    label: label(rgb(64, 160, 255), 1, 'bold 12px sans-serif'),
-  }),
-  EGB_Budynek: () => ({
-    order: 6,
-    maxRes: RES_FAR,
-    line: { color: rgb(200, 0, 0), width: 2 },
-    label: label(rgb(200, 0, 0), 0.5),
-  }),
-  // Koło o średnicy 6 px: niebieskie dla SPD = 1 i ISD = 1, czerwone w pozostałych przypadkach;
-  // czarna kropka 3 px, gdy punkt jest stabilizowany (STB = 3, 4, 5, 6).
-  EGB_PunktGraniczny: (v) => ({
-    order: 8,
-    maxRes: RES_FAR,
-    point: {
-      radius: 3,
-      stroke: v & VARIANT_ACCURATE ? rgb(0, 0, 255) : rgb(255, 0, 0),
-      // Rozporządzenie podaje 0,5 px; na ekranie i ortofotomapie taka linia jest prawie niewidoczna.
-      strokeWidth: 1,
-      dot: v & VARIANT_STABILIZED ? 1.5 : undefined,
-      dotColor: BLACK,
-    },
-    label: label(BLACK, 0.25, '11px sans-serif'),
-  }),
-  // Obręby i jednostki nie mają stylu w tabeli usług EGiB; przyjęto grubszą linię przerywaną w kolorze działek.
-  EGB_ObrebEwidencyjny: () => ({
-    order: 3,
-    maxRes: 200,
-    line: { color: rgb(64, 160, 255), width: 2.5, dash: [12, 4] },
-    label: label(rgb(64, 160, 255), 20, 'bold 13px sans-serif'),
-  }),
-  EGB_JednostkaEwidencyjna: () => ({
-    order: 3,
-    maxRes: 500,
-    line: { color: rgb(160, 60, 200), width: 3, dash: [14, 5] },
-  }),
+// Kolejność prezentacji (zał. 4, rozdz. 1 ust. 12): 1 osnowy na wierzchu … 7 kontury, wody, rzeźba na spodzie.
+const ORDER = {
+  osnowy: 70,
+  granice: 60,
+  ewidencja: 50,
+  budynki: 40,
+  uzbrojenie: 30,
+  zagospodarowanie: 20,
+  kontury: 10,
 }
 
-// --- GESUT: kolory sieci z katalogu znaków mapy zasadniczej ---
-const NETWORKS: [RegExp, Rgba][] = [
-  [/Wodociag/i, rgb(0, 0, 255)],
-  [/Kanalizac/i, rgb(128, 51, 0)],
-  [/Elektroenerget/i, rgb(255, 0, 0)],
-  [/Gaz/i, rgb(191, 191, 0)],
-  [/Cieplow/i, rgb(210, 0, 210)],
-  [/Telekomunik/i, rgb(255, 145, 0)],
-]
+/** Widoczność: obiekty główne do 10 m/px, szczegóły do 1,5 m/px (około 1 : 5000 na ekranie). */
+const RES_MAIN = 10
+const RES_DETAIL = 1.5
 
-function gesut(cls: string, v: number): ClassStyle {
-  const color = NETWORKS.find(([re]) => re.test(cls))?.[1] ?? BLACK
-  const device = /Urzadzeni/i.test(cls)
-  return {
-    order: device ? 7 : 5,
-    maxRes: RES_FAR,
-    line: {
-      color,
-      width: 1,
-      halo: 1,
-      far: { res: 2, width: 2, halo: 2 },
-      // Projektowane: linia przerywana 3 mm na 1 mm.
-      dash: v & VARIANT_PLANNED ? [11, 4] : undefined,
-    },
-    point: { radius: 3, stroke: color, strokeWidth: 1, fill: WHITE },
-    label: label(color, 0.3, '10px sans-serif'),
-  }
+// Kolory sieci uzbrojenia (litera sieci w kodzie SU?…).
+const NET: Record<string, Rgba> = {
+  W: rgb(0, 0, 255),
+  K: rgb(128, 51, 0),
+  E: rgb(255, 0, 0),
+  G: rgb(191, 191, 0),
+  C: rgb(210, 0, 210),
+  T: rgb(255, 145, 0),
+  S: BLACK,
+  N: BLACK,
+  P: BLACK,
+  L: BLACK,
 }
 
-// --- BDOT500: katalog znaków mapy zasadniczej (w GML klasy są zgrubne, więc styl na klasę) ---
-function bdot500(cls: string): ClassStyle {
-  const base: ClassStyle = { order: 3, maxRes: RES_FAR, line: { color: BLACK, width: 1, halo: 0.5 } }
-  switch (cls) {
-    case 'OT_BudynekNiewykazanyWEGIB':
-      // Budynek: linia 0,5 mm.
-      return { ...base, order: 6, line: { color: BLACK, width: 2, halo: 0.5 } }
-    case 'OT_BlokBudynku':
-    case 'OT_ObiektTrwaleZwiazanyZBudynkami':
-      return { ...base, order: 6 }
-    case 'OT_Wody':
-      return { ...base, order: 1, line: { color: rgb(89, 217, 255), width: 1 }, fill: rgb(89, 217, 255, 0.25) }
-    case 'OT_ZagospodarowanieTerenu':
-      return { ...base, order: 1, line: { color: rgb(0, 128, 0), width: 1, halo: 0.5 } }
-    case 'OT_Ogrodzenia':
-      return { ...base, order: 4, line: { color: BLACK, width: 1, dash: [6, 2], halo: 0.5 } }
-    case 'OT_Komunikacja':
-      return { ...base, order: 2 }
-    case 'OT_Skarpa':
-      return { ...base, order: 1, line: { color: BLACK, width: 1, dash: [2, 3], halo: 0.5 } }
-    default:
-      return { ...base, point: { radius: 2.5, stroke: BLACK, strokeWidth: 1, fill: WHITE } }
+/** Opis znaku z katalogu: grubość [mm], kolor, przerywanie [mm], symbol punktowy. */
+interface Sym {
+  w?: number
+  c?: Rgba
+  dash?: number[]
+  order?: number
+  maxRes?: number
+  point?: 'circle' | 'dot' | 'tree'
+  /** Średnica symbolu punktowego [mm]. */
+  d?: number
+  label?: number
+}
+
+// Element + odstęp (a, b) z katalogu; kreska z kropką: a, (b − kropka) / 2, kropka, (b − kropka) / 2.
+const dashDot = (a: number, b: number, dot: number) => [a, (b - dot) / 2, dot, (b - dot) / 2]
+
+const CATALOG: Record<string, Sym> = {
+  // EGiB
+  EGJE: { w: 0.35, dash: dashDot(3, 2, 0.35), order: ORDER.ewidencja + 3, maxRes: 50 },
+  EGOE: { w: 0.35, dash: [3, 2], order: ORDER.ewidencja + 2, maxRes: 50, label: 20 },
+  EGDE: { w: 0.18, order: ORDER.ewidencja, label: 1 },
+  EGPG: { w: 0.18, point: 'circle', d: 1.0, order: ORDER.ewidencja + 5, maxRes: RES_DETAIL, label: 0.25 },
+  EGUG: { w: 0.18, c: rgb(0, 128, 0), dash: [1, 1], order: ORDER.kontury, label: 0.7 },
+  EGKK: { w: 0.18, c: rgb(36, 188, 36), dash: [3, 1], order: ORDER.kontury + 1, label: 0.7 },
+  EGBU: { w: 0.5, order: ORDER.budynki + 5, label: 0.5 },
+  EGBN: { w: 0.18, order: ORDER.budynki + 4 },
+  EGBP: { w: 0.18, dash: [2, 1], order: ORDER.budynki + 4 },
+  EGBL: { w: 0.18, dash: [2, 1], order: ORDER.budynki + 4 },
+  EGBA: { w: 0.5, dash: [4, 1], order: ORDER.budynki + 4 },
+  EGBZ: { w: 0.18, dash: [2, 1], order: ORDER.budynki + 4 },
+  EGBY: { w: 0.18, order: ORDER.budynki + 4 },
+  EGBJ: { w: 0.18, dash: [2, 1], order: ORDER.budynki + 3 },
+  // BDOT500: budynki i obiekty z nimi związane jak w EGiB
+  OTBU: { w: 0.5, order: ORDER.budynki + 5, label: 0.5 },
+  OTBB: { w: 0.5, order: ORDER.budynki + 5, label: 0.5 },
+  OTBN: { w: 0.18, order: ORDER.budynki + 4 },
+  OTBP: { w: 0.18, dash: [2, 1], order: ORDER.budynki + 4 },
+  OTBL: { w: 0.18, dash: [2, 1], order: ORDER.budynki + 4 },
+  OTBA: { w: 0.5, dash: [4, 1], order: ORDER.budynki + 4 },
+  OTBZ: { w: 0.18, dash: [2, 1], order: ORDER.budynki + 4 },
+  OTBY: { w: 0.18, order: ORDER.budynki + 4 },
+  OTBJ: { w: 0.18, dash: [2, 1], order: ORDER.budynki + 3 },
+  // BDOT500: budowle
+  OTDK: { w: 0.35 },
+  OTDC: { w: 0.25 },
+  OTDZ: { w: 0.25 },
+  OTDS: { w: 0.25 },
+  OTDW: { w: 0.25 },
+  OTDM: { w: 0.25 },
+  OTDA: { w: 0.18, dash: [2, 1] },
+  OTDF: { point: 'circle', d: 2.0 },
+  OTDT: { point: 'circle', d: 3.5 },
+  OTDP: { point: 'circle', d: 3.0 },
+  OTDD: { point: 'circle', d: 1.0 },
+  OTDI: { point: 'dot', d: 0.8 },
+  // BDOT500: ogrodzenia
+  OTOO: { w: 0.35 },
+  // BDOT500: komunikacja
+  OTKJ: { w: 0.18, dash: [3, 1], label: 0.5 },
+  OTKK: { w: 0.25 },
+  OTKC: { w: 0.18, dash: [2, 1] },
+  OTKG: { w: 0.18, dash: [2, 1] },
+  OTKU: { w: 0.18, dash: [3, 1] },
+  OTKM: { w: 0.35 },
+  OTKZ: { w: 0.35 },
+  OTKW: { w: 0.35 },
+  OTKE: { w: 0.35 },
+  OTKT: { w: 0.35 },
+  OTKL: { w: 0.18, dash: [1.2, 2] },
+  // BDOT500: sport, zagospodarowanie terenu
+  OTSI: { w: 0.18, dash: [2, 1], order: ORDER.zagospodarowanie },
+  OTZL: { point: 'tree', d: 2.6, c: rgb(0, 128, 0), order: ORDER.zagospodarowanie },
+  OTZG: { point: 'tree', d: 3.2, c: rgb(0, 128, 0), order: ORDER.zagospodarowanie },
+  // BDOT500: wody i rzeźba terenu
+  OTWP: { c: rgb(89, 217, 255), order: ORDER.kontury },
+  OTWS: { c: rgb(89, 217, 255), order: ORDER.kontury },
+  OTWJ: { w: 0.35, order: ORDER.kontury },
+  OTWL: { w: 0.35, order: ORDER.kontury },
+  OTWZ: { w: 0.35, order: ORDER.kontury },
+  OTRK: { w: 0.18, order: ORDER.kontury },
+  OTRS: { point: 'dot', d: 0.6, order: ORDER.kontury, maxRes: 0.5, label: 0.25 },
+  OTRN: { point: 'dot', d: 0.6, order: ORDER.kontury, maxRes: 0.5, label: 0.25 },
+  // GESUT: wyjątki od koloru sieci i grubości 0,18 mm
+  SUWR: { w: 0.25 },
+  SUWD: { c: BLACK, point: 'circle', d: 2.0 },
+  SUWG: { c: BLACK, point: 'circle', d: 2.0 },
+  SUWH: { point: 'circle', d: 2.0 },
+  SUWS: { point: 'circle', d: 2.0 },
+  SUWW: { point: 'dot', d: 1.2 },
+  SUKW: { point: 'dot', d: 1.2 },
+  SUGW: { point: 'dot', d: 1.2 },
+  SUCW: { point: 'dot', d: 1.2 },
+  SUKS: { point: 'circle', d: 2.0 },
+  SUKN: { w: 0.25 },
+  SUEO: { c: BLACK, point: 'circle', d: 2.0 },
+  SUEM: { c: BLACK, point: 'circle', d: 2.0 },
+  SUEA: { c: BLACK, point: 'circle', d: 3.0 },
+  SUEL: { c: rgb(255, 64, 64), point: 'circle', d: 2.5 },
+  SUTW: { c: BLACK, point: 'circle', d: 3.0 },
+  SULO: { w: 0.35 },
+  SUPP: { point: 'circle', d: 1.5 },
+  SUPY: { point: 'circle', d: 1.4 },
+}
+
+function prefixOrder(code: string) {
+  if (code.startsWith('EG')) return ORDER.ewidencja
+  if (code.startsWith('SU')) return ORDER.uzbrojenie
+  if (/^OT[SZ]/.test(code)) return ORDER.zagospodarowanie
+  if (/^OT[WR]/.test(code)) return ORDER.kontury
+  return ORDER.budynki
+}
+
+function fromCatalog(code: string, variant: number): ClassStyle {
+  const sym = CATALOG[code] ?? {}
+  const gesut = code.startsWith('SU')
+  const color = sym.c ?? (gesut ? (NET[code[2]] ?? BLACK) : BLACK)
+  let dash = sym.dash
+  let width = sym.w ?? 0.18
+  // Budynek podziemny: znak (B) przerywany 2 mm / 1 mm.
+  if (variant & VARIANT_UNDERGROUND) dash = [2, 1]
+  if (gesut && code.endsWith('P')) {
+    // Przewody nadziemne (znaki B–E) uproszczone do kreski długiej; projektowane: 3 mm na 1 mm.
+    if (variant & VARIANT_OVERHEAD) dash = code === 'SUTP' ? [15, 2] : [10, 1]
+    if (variant & VARIANT_PLANNED) dash = [3, 1]
   }
+  if (code === 'SULO') width = 0.35
+  const style: ClassStyle = {
+    order: sym.order ?? prefixOrder(code),
+    maxRes: sym.maxRes ?? (gesut && !code.endsWith('P') ? RES_DETAIL : RES_MAIN),
+    line: { color, width: lw(width), dash: dash?.map(px), halo: HALO },
+  }
+  // GESUT: opisy przewodów (bez nadziemnych elektroenergetycznych i telekomunikacyjnych) i etykiety „proj.”.
+  const gesutLabel =
+    gesut &&
+    (code.endsWith('P')
+      ? !(variant & VARIANT_OVERHEAD && (code === 'SUEP' || code === 'SUTP'))
+      : !!(variant & VARIANT_PLANNED))
+  if (sym.label !== undefined || gesutLabel) {
+    // Opisy: tekst 2,0 mm (przewody 1,5 mm), na ekranie nie mniejszy niż 11 px.
+    style.label = { color, maxRes: sym.label ?? 0.3, font: `${Math.max(11, Math.round(px(2)))}px sans-serif` }
+  }
+  const d = sym.d ?? (gesut ? 1.6 : 1.2)
+  const r = Math.max(2.5, px(d) / 2)
+  if (code === 'EGPG') {
+    // Punkt graniczny stabilizowany (A): okrąg 1,0 mm przesłaniający tło; niestabilizowany (B): kropka.
+    style.point =
+      variant & VARIANT_STABILIZED
+        ? { radius: r, stroke: BLACK, strokeWidth: lw(0.18), fill: WHITE }
+        : { radius: 1.6, stroke: BLACK, strokeWidth: 1, fill: BLACK }
+  } else if (sym.point === 'dot') {
+    style.point = { radius: Math.max(1.5, px(d) / 2), stroke: color, strokeWidth: 1, fill: color }
+  } else if (sym.point === 'tree') {
+    style.point = { radius: r, stroke: color, strokeWidth: lw(0.18), dot: 1, dotColor: color }
+  } else {
+    style.point = { radius: r, stroke: color, strokeWidth: lw(0.18), fill: WHITE }
+  }
+  return style
 }
 
 const DEFAULT: ClassStyle = {
@@ -176,16 +258,22 @@ const DEFAULT: ClassStyle = {
   point: { radius: 3, stroke: BLACK, strokeWidth: 1, fill: rgb(56, 189, 248) },
 }
 
-/** Styl obiektu danej klasy i wariantu (wariant z rdzenia: atrybuty takie jak SPD, ISD, STB, status). */
-export function styleOf(cls: string, variant = 0): ClassStyle {
-  if (cls in EGIB) return EGIB[cls](variant)
-  if (cls.startsWith('GES_')) return gesut(cls, variant)
+/** Domyślny kod dla obiektów bez znaku w katalogu, zależny od bazy danych. */
+function fallbackCode(cls: string) {
+  if (cls.startsWith('EGB_')) return 'EG'
+  if (cls.startsWith('GES_')) return 'SUN'
   // BDOT500: klasy OT_ bez przyrostka geometrii (BDOT10k ma postać OT_XXXX_A/L/P).
-  if (cls.startsWith('OT_') && !/^OT_[A-Z]{4}_[APL]$/.test(cls)) return bdot500(cls)
-  return DEFAULT
+  if (cls.startsWith('OT_') && !/^OT_[A-Z]{4}_[APL]$/.test(cls)) return 'OT'
+  return ''
+}
+
+/** Styl obiektu: klasa, kod znaku umownego z rdzenia i wariant (bity `VARIANT_*`). */
+export function styleOf(cls: string, code = '', variant = 0): ClassStyle {
+  const c = code || fallbackCode(cls)
+  return c ? fromCatalog(c, variant) : DEFAULT
 }
 
 /** Pierwszeństwo przy wyborze kliknięciem: punkty przed liniami i powierzchniami, wyższe warstwy przed niższymi. */
-export function pickPriority(s: ClassStyle) {
-  return (s.point ? 100 : 0) + s.order
+export function pickPriority(s: ClassStyle, point: boolean) {
+  return (point ? 1000 : 0) + s.order
 }

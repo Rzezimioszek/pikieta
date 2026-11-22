@@ -28,6 +28,9 @@ export interface GmlLayerData {
   cls: ArrayLike<number>
   labels: ArrayLike<string>
   variant: ArrayLike<number>
+  /** Kody znaków umownych (słownik) i numer kodu dla każdego obiektu. */
+  codes: string[]
+  code: ArrayLike<number>
 }
 
 const css = (c: Rgba) =>
@@ -251,16 +254,17 @@ export class GmlMapLayers {
   private labelStyle(f: Feature, res: number): Style | undefined {
     const s = f.get('style') as ClassStyle
     if (!s.label || res > s.label.maxRes || res > s.maxRes) return undefined
-    const key = `${css(s.label.color)}|${s.label.font}|${!!s.point}`
+    const pt = !!f.get('pt')
+    const key = `${css(s.label.color)}|${s.label.font}|${pt}`
     let st = this.labelStyles.get(key)
     if (!st) {
       st = new Style({
         text: new Text({
           font: s.label.font,
-          offsetY: s.point ? -10 : 0,
+          offsetY: pt ? -10 : 0,
           fill: new Fill({ color: css(s.label.color) }),
           stroke: HALO,
-          overflow: !s.point,
+          overflow: !pt,
         }),
       })
       this.labelStyles.set(key, st)
@@ -273,27 +277,21 @@ export class GmlMapLayers {
   set(id: string, data: GmlLayerData, visible: boolean, hidden: string[]) {
     this.remove(id)
     const d = data.decoded
-    timed('GPU: bufory warstwy', () =>
-      this.gpu.set(
-        id,
-        {
-          decoded: d,
-          classes: data.classes,
-          cls: data.cls,
-          variant: data.variant,
-        },
-        visible,
-        hidden,
-      ),
-    )
-    const cache = new globalThis.Map<number, ClassStyle>()
+    // Styl liczony raz na (klasa, kod znaku, wariant); grupy o tym samym stylu i klasie trafiają razem na GPU.
+    const groups = new globalThis.Map<number, { cls: string; style: ClassStyle; list: number[] }>()
     const styles = new Array<ClassStyle>(d.count)
     for (let i = 0; i < d.count; i++) {
-      const key = data.cls[i] * 256 + (data.variant[i] ?? 0)
-      let s = cache.get(key)
-      if (!s) cache.set(key, (s = styleOf(data.classes[data.cls[i]], data.variant[i] ?? 0)))
-      styles[i] = s
+      const [c, k, v] = [data.cls[i], data.code?.[i] ?? 0, data.variant[i] ?? 0]
+      const key = (c * 4096 + k) * 256 + v
+      let g = groups.get(key)
+      if (!g) {
+        const cls = data.classes[c]
+        groups.set(key, (g = { cls, style: styleOf(cls, data.codes?.[k] ?? '', v), list: [] }))
+      }
+      g.list.push(i)
+      styles[i] = g.style
     }
+    timed('GPU: bufory warstwy', () => this.gpu.set(id, d, [...groups.values()], visible, hidden))
     const index = timed('indeks przestrzenny', () => new GridIndex(d))
     const entry: Entry = {
       data,
@@ -328,6 +326,9 @@ export class GmlMapLayers {
             style: s,
             cls: data.classes[data.cls[i]],
             key: `${id}:${i}`,
+            pt:
+              entry.index.bbox[4 * i] === entry.index.bbox[4 * i + 2] &&
+              entry.index.bbox[4 * i + 1] === entry.index.bbox[4 * i + 3],
           },
           true,
         )
@@ -420,11 +421,8 @@ export class GmlMapLayers {
         if (resolution > s.maxRes || e.hidden.has(e.data.classes[e.data.cls[i]])) continue
         if (!hits(e.data.decoded, i, x, y, tolerance)) continue
         const b = e.index.bbox.subarray(4 * i, 4 * i + 4)
-        const cand = {
-          key: `${id}:${i}`,
-          prio: pickPriority(s),
-          area: (b[2] - b[0]) * (b[3] - b[1]),
-        }
+        const area = (b[2] - b[0]) * (b[3] - b[1])
+        const cand = { key: `${id}:${i}`, prio: pickPriority(s, area === 0), area }
         if (!best || cand.prio > best.prio || (cand.prio === best.prio && cand.area < best.area)) best = cand
       }
     }

@@ -4,7 +4,7 @@
 import earcut from 'earcut'
 import type { FrameState } from 'ol/Map'
 import { parts, type Decoded } from './gmlbuf'
-import { styleOf, type ClassStyle, type Rgba } from './gmlstyle'
+import type { ClassStyle, Rgba } from './gmlstyle'
 
 const LINE_VS = `#version 300 es
 in vec2 a_p0;
@@ -37,13 +37,17 @@ void main() {
 const LINE_FS = `#version 300 es
 precision highp float;
 uniform vec4 u_color;
-uniform vec2 u_dash;
+uniform vec4 u_dash;
 uniform float u_width;
 in float v_dist;
 in float v_across;
 out vec4 o;
 void main() {
-  if (u_dash.x > 0.0 && mod(v_dist, u_dash.x + u_dash.y) > u_dash.x) discard;
+  if (u_dash.x > 0.0) {
+    float t = mod(v_dist, u_dash.x + u_dash.y + u_dash.z + u_dash.w);
+    bool on = t < u_dash.x || (t >= u_dash.x + u_dash.y && t < u_dash.x + u_dash.y + u_dash.z);
+    if (!on) discard;
+  }
   float a = clamp(u_width * 0.5 + 0.5 - abs(v_across), 0.0, 1.0) * u_color.a;
   if (a <= 0.0) discard;
   o = vec4(u_color.rgb * a, a);
@@ -127,11 +131,11 @@ interface GpuLayer {
   hidden: Set<string>
 }
 
-export interface GpuLayerData {
-  decoded: Decoded
-  classes: string[]
-  cls: ArrayLike<number>
-  variant: ArrayLike<number>
+/** Obiekty jednej klasy o wspólnym stylu. */
+export interface GpuGroup {
+  cls: string
+  style: ClassStyle
+  list: number[]
 }
 
 const WHITE: Rgba = [1, 1, 1, 1]
@@ -186,10 +190,9 @@ export class GmlGpu {
   }
 
   /** Buduje bufory warstwy: grupy (klasa, wariant) w kolejności rysowania. */
-  set(id: string, data: GpuLayerData, visible: boolean, hidden: string[]) {
+  set(id: string, d: Decoded, defs: GpuGroup[], visible: boolean, hidden: string[]) {
     this.remove(id)
     const gl = this.gl
-    const d = data.decoded
     // Środek zasięgu jako początek układu: współrzędne względne mieszczą się w float32 z milimetrami.
     let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity]
     for (let k = 0; k < d.coords.length; k += 2) {
@@ -201,18 +204,7 @@ export class GmlGpu {
     }
     const origin: [number, number] = d.coords.length ? [(minX + maxX) / 2, (minY + maxY) / 2] : [0, 0]
 
-    const byGroup = new Map<number, number[]>()
-    for (let i = 0; i < d.count; i++) {
-      const key = data.cls[i] * 256 + (data.variant[i] ?? 0)
-      let list = byGroup.get(key)
-      if (!list) byGroup.set(key, (list = []))
-      list.push(i)
-    }
-    const groupDefs = [...byGroup.entries()].map(([key, list]) => {
-      const cls = data.classes[Math.floor(key / 256)]
-      return { cls, style: styleOf(cls, key % 256), list }
-    })
-    groupDefs.sort((a, b) => a.style.order - b.style.order)
+    const groupDefs = [...defs].sort((a, b) => a.style.order - b.style.order)
 
     // Wstępne policzenie rozmiarów buforów.
     let nSeg = 0
@@ -223,10 +215,11 @@ export class GmlGpu {
         for (const p of parts(d, i)) {
           if (p.t === 'point') nPts++
           else if (p.t === 'line') nSeg += Math.max(0, p.n - 1)
-          else for (const [, n] of p.rings) {
-            nSeg += Math.max(0, n - 1)
-            if (g.style.fill) nFillV += n
-          }
+          else
+            for (const [, n] of p.rings) {
+              nSeg += Math.max(0, n - 1)
+              if (g.style.fill) nFillV += n
+            }
         }
       }
     }
@@ -365,9 +358,15 @@ export class GmlGpu {
       if (!l.visible) continue
       const [ox, oy] = l.origin
       const m = new Float32Array([
-        t[0] * pr, t[1] * pr, 0,
-        t[2] * pr, t[3] * pr, 0,
-        (t[0] * ox + t[2] * oy + t[4]) * pr, (t[1] * ox + t[3] * oy + t[5]) * pr, 1,
+        t[0] * pr,
+        t[1] * pr,
+        0,
+        t[2] * pr,
+        t[3] * pr,
+        0,
+        (t[0] * ox + t[2] * oy + t[4]) * pr,
+        (t[1] * ox + t[3] * oy + t[5]) * pr,
+        1,
       ])
       const shown = l.groups.filter((g) => !l.hidden.has(g.cls) && res <= g.style.maxRes)
       this.drawFills(l, shown, m, w, h)
@@ -393,7 +392,16 @@ export class GmlGpu {
     }
   }
 
-  private drawLines(l: GpuLayer, groups: Group[], m: Float32Array, w: number, h: number, pr: number, res: number, halo: boolean) {
+  private drawLines(
+    l: GpuLayer,
+    groups: Group[],
+    m: Float32Array,
+    w: number,
+    h: number,
+    pr: number,
+    res: number,
+    halo: boolean,
+  ) {
     const gl = this.gl
     const p = this.line
     gl.useProgram(p.prog)
@@ -420,8 +428,8 @@ export class GmlGpu {
       gl.vertexAttribPointer(ad, 1, gl.FLOAT, false, LINE_STRIDE * 4, bytes + 16)
       gl.uniform1f(p.u('u_width'), (halo ? width + 2 * haloW : width) * pr)
       gl.uniform4fv(p.u('u_color'), halo ? WHITE : s.color)
-      const dash = !halo && s.dash ? [s.dash[0] * pr, s.dash[1] * pr] : [0, 0]
-      gl.uniform2f(p.u('u_dash'), dash[0], dash[1])
+      const dash = !halo && s.dash ? s.dash : [0, 0]
+      gl.uniform4f(p.u('u_dash'), dash[0] * pr, dash[1] * pr, (dash[2] ?? 0) * pr, (dash[3] ?? 0) * pr)
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, g.line[1])
     }
   }
