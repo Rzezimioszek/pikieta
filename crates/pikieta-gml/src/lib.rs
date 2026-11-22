@@ -34,6 +34,9 @@ pub struct Feature {
     pub id: String,
     /// Krótka etykieta do mapy, np. numer działki.
     pub label: String,
+    /// Wariant stylu wynikający z atrybutów (bity [`VARIANT_ACCURATE`], [`VARIANT_STABILIZED`],
+    /// [`VARIANT_PLANNED`]).
+    pub variant: u8,
     pub geometry: Option<Geometry>,
     pub geometry_error: Option<String>,
     /// `srsName` geometrii.
@@ -189,8 +192,17 @@ impl GmlDocument {
             .and_then(|r| r.element_at_mut(&p.path))
             .ok_or("nie znaleziono elementu atrybutu")?;
         el.set_text(value);
-        if LABEL_KEYS.contains(&key) {
-            self.features[feature].label = short_label(key, value);
+        // Etykieta i wariant stylu zależą od atrybutów, więc liczymy je od nowa.
+        let class = self.features[feature].class.clone();
+        if let Some(el) = self.element(feature) {
+            let (label, variant) = describe(&class, el);
+            let f = &mut self.features[feature];
+            f.label = if label.is_empty() {
+                f.id.clone()
+            } else {
+                label
+            };
+            f.variant = variant;
         }
         Ok(())
     }
@@ -226,6 +238,7 @@ impl GmlDocument {
                 class: el.local_name().to_string(),
                 id: gml_id(el).unwrap_or_default(),
                 label: String::new(),
+                variant: 0,
                 geometry: None,
                 geometry_error: None,
                 srs: None,
@@ -247,16 +260,10 @@ impl GmlDocument {
                     }
                 }
             }
-            // Etykieta z identyfikatora EGiB: bezpośredni element tekstowy, np. idDzialki.
-            f.label = LABEL_KEYS
-                .iter()
-                .find_map(|k| {
-                    let c = el.child(k).filter(|c| !c.has_elements())?;
-                    let v = c.text();
-                    let v = v.trim();
-                    (!v.is_empty()).then(|| short_label(k, v))
-                })
-                .unwrap_or_else(|| f.id.clone());
+            (f.label, f.variant) = describe(&f.class, el);
+            if f.label.is_empty() {
+                f.label = f.id.clone();
+            }
             self.features.push(f);
             self.paths.push(path);
         }
@@ -544,6 +551,59 @@ fn merge_duplicates(props: &mut Vec<Property>) {
 }
 
 /// Identyfikatory EGiB mają postać `146518_8.0101.12/1`; etykietą jest część po ostatniej kropce.
+/// Punkt graniczny pozyskany pomiarem (SPD = 1) i spełniający warunki dokładnościowe (ISD = 1).
+pub const VARIANT_ACCURATE: u8 = 1;
+/// Punkt graniczny stabilizowany (STB = 3, 4, 5 lub 6).
+pub const VARIANT_STABILIZED: u8 = 2;
+/// Obiekt GESUT o statusie „projektowany”.
+pub const VARIANT_PLANNED: u8 = 4;
+
+fn child_text(el: &Element, name: &str) -> String {
+    el.child(name)
+        .filter(|c| !c.has_elements())
+        .map(|c| c.text().trim().to_string())
+        .unwrap_or_default()
+}
+
+/// Etykieta i wariant stylu obiektu według usług WMS z rozporządzeń
+/// (EGiB: załącznik nr 8; GESUT: status projektowany).
+fn describe(class: &str, el: &Element) -> (String, u8) {
+    let t = |n: &str| child_text(el, n);
+    let id_label = || {
+        LABEL_KEYS
+            .iter()
+            .find_map(|k| {
+                let v = t(k);
+                (!v.is_empty()).then(|| short_label(k, &v))
+            })
+            .unwrap_or_default()
+    };
+    match class {
+        "EGB_PunktGraniczny" => {
+            let mut v = 0;
+            if t("sposobPozyskania") == "1" && t("spelnienieWarunkowDokl") == "1" {
+                v |= VARIANT_ACCURATE;
+            }
+            if matches!(t("rodzajStabilizacji").as_str(), "3" | "4" | "5" | "6") {
+                v |= VARIANT_STABILIZED;
+            }
+            (id_label(), v)
+        }
+        // Opis budynku: funkcja (rodzaj wg KŚT) i liczba kondygnacji, np. „m3”.
+        "EGB_Budynek" => (
+            format!("{}{}", t("rodzajWgKST"), t("liczbaKondygnacjiNadziemnych")),
+            0,
+        ),
+        "EGB_KonturUzytkuGruntowego" => (t("OFU"), 0),
+        "EGB_KonturKlasyfikacyjny" => (format!("{}{}", t("OZU"), t("OZK")), 0),
+        c if c.starts_with("GES_") => {
+            let planned = t("status") == "p";
+            (id_label(), if planned { VARIANT_PLANNED } else { 0 })
+        }
+        _ => (id_label(), 0),
+    }
+}
+
 fn short_label(key: &str, value: &str) -> String {
     if key.starts_with("id") {
         value.rsplit('.').next().unwrap_or(value).to_string()

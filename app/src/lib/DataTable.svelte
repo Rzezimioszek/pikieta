@@ -21,6 +21,13 @@
     canMove?: (row: R, index: number) => boolean
     onactivate?: (row: R) => void
     empty?: string
+    /** Wiersz zawsze na końcu (np. do wpisania nowego obiektu), poza sortowaniem i zaznaczaniem. */
+    tail?: R
+    /**
+     * Zatwierdzenie wiersza końcowego: Enter (`explicit`) albo wyjście z wiersza.
+     * Zwraca `true`, gdy wiersz został przyjęty (wtedy fokus wraca do nowego pustego wiersza).
+     */
+    ontailcommit?: (explicit: boolean) => boolean
     /** Wysokość tabeli dopasowana do treści, ale nie większa niż podana (CSS). */
     maxHeight?: string
   }
@@ -39,6 +46,8 @@
     canMove,
     onactivate,
     empty = 'Brak danych.',
+    tail,
+    ontailcommit,
     maxHeight,
   }: Props = $props()
 
@@ -67,6 +76,7 @@
     const list = rows.map((row, index) => ({ row, index, key: rowKey(row, index) }))
     const col = sort && columns.find((c) => c.key === sort!.key)
     if (col) list.sort((a, b) => compare(col.value(a.row), col.value(b.row)) * sort!.dir)
+    if (tail) list.push({ row: tail, index: rows.length, key: '#tail' })
     return list
   })
 
@@ -90,11 +100,12 @@
   }
 
   function select(pos: number, key: string, e: MouseEvent) {
+    if (key === '#tail') return
     if (!selection || (e.target as HTMLElement).closest('input, button')) return
     if (e.shiftKey && anchor !== null) {
       if (!(e.ctrlKey || e.metaKey)) selection.clear()
       const [a, b] = [Math.min(anchor, pos), Math.max(anchor, pos)]
-      for (let i = a; i <= b; i++) selection.add(items[i].key)
+      for (let i = a; i <= b; i++) if (items[i].key !== '#tail') selection.add(items[i].key)
       return
     }
     if (e.ctrlKey || e.metaKey) {
@@ -104,6 +115,11 @@
       selection.add(key)
     }
     anchor = pos
+  }
+
+  /** Ustawia fokus w pierwszej komórce wiersza końcowego. */
+  export function focusNew() {
+    if (tail) focusTail(0)
   }
 
   /** Przewija tabelę tak, żeby wiersz był widoczny. */
@@ -159,14 +175,39 @@
     window.addEventListener('pointercancel', up, { once: true })
   }
 
-  function onKey(e: KeyboardEvent, pos: number, ci: number) {
+  async function focusTail(ci: number) {
+    await tick()
+    // Szkic wiersza zmienił się na pusty w jednym kroku, więc Svelte nie widzi zmiany wartości pól.
+    const pos = items.length - 1
+    for (const input of wrap?.querySelectorAll<HTMLInputElement>(`input[data-r="${pos}"]`) ?? []) {
+      input.value = tail ? columns[Number(input.dataset.c)].value(tail) : ''
+    }
+    focusCell(pos, ci)
+  }
+
+  /**
+   * Zatwierdza wartość komórki od razu (bez czekania na zdarzenie `change` przy utracie fokusu,
+   * które przyszłoby już po przejściu do innego wiersza).
+   */
+  function commitNow(input: HTMLInputElement, c: Column<R>, row: R) {
+    if (live || input.value === c.value(row)) return
+    c.set?.(row, input.value)
+    // Przypisanie wartości ustala ją jako zatwierdzoną; przeglądarka nie wyśle już `change`.
+    input.value = c.value(row)
+  }
+
+  function onKey(e: KeyboardEvent, pos: number, ci: number, c: Column<R>, row: R) {
     if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault()
       const to = pos + (e.key === 'ArrowUp' ? -1 : 1)
       if (moveRow(pos, to)) focusCell(to, ci)
     } else if (e.key === 'Enter' || e.key === 'ArrowDown') {
       e.preventDefault()
-      if (!live) (e.currentTarget as HTMLInputElement).dispatchEvent(new Event('change'))
+      commitNow(e.target as HTMLInputElement, c, row)
+      if (items[pos]?.key === '#tail') {
+        if (e.key === 'Enter' && ontailcommit?.(true)) focusTail(0)
+        return
+      }
       focusCell(pos + 1, ci)
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
@@ -238,7 +279,11 @@
           class:drop-below={drag && drag.to === it.pos && drag.to > drag.from}
           style:height={`${ROW_H}px`}
           onclick={(e) => select(it.pos, it.key, e)}
-          ondblclick={(e) => !(e.target as HTMLElement).closest('input') && onactivate?.(it.row)}
+          class:tail={it.key === '#tail'}
+          ondblclick={(e) => !(e.target as HTMLElement).closest('input') && it.key !== '#tail' && onactivate?.(it.row)}
+          onfocusout={it.key === '#tail'
+            ? (e) => !e.currentTarget.contains(e.relatedTarget as Node) && ontailcommit?.(false)
+            : undefined}
         >
           <td
             class="rn"
@@ -266,7 +311,7 @@
                   placeholder={c.placeholder?.(it.row)}
                   oninput={live ? (e) => commit(e, c, it.row) : undefined}
                   onchange={live ? undefined : (e) => commit(e, c, it.row)}
-                  onkeydown={(e) => onKey(e, it.pos, ci)}
+                  onkeydown={(e) => onKey(e, it.pos, ci, c, it.row)}
                   onfocus={() => arm(c, it.row, it.pos, ci)}
                 />
               {:else}
@@ -469,6 +514,9 @@
   td.ok {
     color: var(--ok);
     font-weight: 600;
+  }
+  tbody tr.tail td {
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
   }
   .spacer td {
     padding: 0;

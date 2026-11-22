@@ -306,7 +306,8 @@
   }
   .tabs button {
     padding: 6px 14px;
-    border: none;
+    /* Przezroczysta ramka, żeby aktywna karta nie przesuwała sąsiednich. */
+    border: 1px solid transparent;
     border-radius: 10px;
     background: transparent;
     color: var(--ink-soft);
@@ -315,7 +316,7 @@
   .tabs button.on {
     background: var(--field-bg);
     color: var(--ink);
-    box-shadow: inset 0 -2px 0 var(--accent);
+    border-color: var(--accent);
   }
   .crs {
     display: flex;

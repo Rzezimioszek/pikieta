@@ -219,3 +219,34 @@ fn points_writer_round_trip() {
         Some(2178)
     );
 }
+
+#[test]
+fn labels_and_style_variants_follow_egib_wms_rules() {
+    let d = doc();
+    assert_eq!(find(&d, "TEST.Bud.1").label, "1103");
+    assert_eq!(find(&d, "TEST.KU.1").label, "R");
+    assert_eq!(find(&d, "TEST.KK.1").label, "RIIIa");
+    // PG.1: SPD = 1, ISD = 1, STB = 1 → dokładny, niestabilizowany.
+    assert_eq!(find(&d, "TEST.PG.1").variant, VARIANT_ACCURATE);
+    // PG.3: SPD = 2 → czerwony.
+    assert_eq!(find(&d, "TEST.PG.3").variant, 0);
+    let stab = EGIB.replace(
+        "<egb:rodzajStabilizacji>2</egb:rodzajStabilizacji>",
+        "<egb:rodzajStabilizacji>4</egb:rodzajStabilizacji>",
+    );
+    let d2 = GmlDocument::parse(&stab).unwrap();
+    assert_eq!(
+        find(&d2, "TEST.PG.2").variant,
+        VARIANT_ACCURATE | VARIANT_STABILIZED
+    );
+    // Edycja atrybutu przelicza wariant.
+    let mut d3 = doc();
+    let i = d3
+        .features
+        .iter()
+        .position(|f| f.id == "TEST.PG.3")
+        .unwrap();
+    d3.set_property(i, "spelnienieWarunkowDokl", "1").unwrap();
+    d3.set_property(i, "sposobPozyskania", "1").unwrap();
+    assert_eq!(d3.features[i].variant, VARIANT_ACCURATE);
+}

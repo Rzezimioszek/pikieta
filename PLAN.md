@@ -149,12 +149,21 @@ Wydajność dużych plików (21.11.2026), po zgłoszeniu, że plik 150 MB blokow
 
 Pomiary płynności przesuwania mapy z 157 tys. obiektów: przy przybliżeniu ok. 60 klatek/s; z całą warstwą w widoku mediana 17 ms na klatkę, ale pojedyncze klatki 100–300 ms przy przebudowie buforów WebGL.
 
+Druga runda (21.11.2026), po uwagach z testu na prawdziwym pliku (127 tys. obiektów):
+
+- własny renderer WebGL2 (`glrender.ts`) zamiast warstwy wektorowej OpenLayers: bufory budowane raz po wczytaniu, przy przesuwaniu i przybliżaniu zmienia się tylko macierz; linie jako instancjonowane prostokąty (grubość, przerywanie, biała obwódka), punkty jako koła w shaderze, wypełnienia z triangulacji `earcut`;
+- style klas według rozporządzeń z folderu `isap`: EGiB według usługi WMS (D20240219, zał. 8: działki 64,160,255; budynki 200,0,0 2 px; użytki granatowe przerywane 5+5; kontury klasyfikacyjne zielone 9+7; punkty graniczne 6 px, niebieskie przy SPD=1 i ISD=1, czerwone pozostałe, czarna kropka przy stabilizacji 3–6; widoczność do 10 m/px), GESUT według zał. 3 D20211374 (barwy sieci z katalogu mapy zasadniczej, biała obwódka, projektowane przerywane), BDOT500 według zał. 4 D20211385 (głównie czarne, budynki grubsze, wody niebieskie); obręb i jednostka ewidencyjna to wybór własny;
+- rdzeń wylicza wariant stylu (dokładność, stabilizacja, status projektowany) i etykiety jak w WMS (budynek: rodzaj KŚT i kondygnacje, użytek: OFU, kontur: OZU+OZK);
+- etykiety tworzone partiami w tle, style z pamięci podręcznej na klasę i wariant, indeks przestrzenny bez obiektów pośrednich (0,46 s → 0,3 s), atrybuty tabeli pobierane po geometrii (pierwsza klasa 2,5–3 s → ok. 1 s);
+- interfejs: aktywne zakładki z pełną ramką, tabela punktów z wierszem wpisu na końcu (Enter dodaje punkt, przejście do kolejnego wiersza), edycja włączona domyślnie;
+- pomiary włączane przez `localStorage['pikieta.debug'] = '1'` (konsola).
+
 Znane ograniczenia: pamięć procesu desktopowego to ok. 0,9 GB na dokument 150 MB (drzewo XML w pamięci); duże warstwy nie trafiają do pliku projektu w przeglądarce (powyżej 30 MB), na desktopie zapisuje się ścieżka; na Androidzie działa wątek roboczy z WASM (niesprawdzone na urządzeniu).
 
 Do zamknięcia etapu:
 
 - test na prawdziwym pliku EGiB z ośrodka dokumentacji (zanonimizowanym), w tym wydajność dla dużych plików;
-- profile GESUT i BDOT500 (rozpoznawanie klas, etykiety, style);
+- profile GESUT i BDOT500: style są, do sprawdzenia na prawdziwych plikach (etykiety, rozpoznawanie sieci);
 - walidacja względem schematów XSD tylko w zakresie reguł, bez pełnego walidatora.
 
 ## Ryzyka

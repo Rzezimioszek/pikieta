@@ -27,6 +27,7 @@
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-dialog": "^2.8.4",
     "@tauri-apps/plugin-fs": "^2.7.1",
+    "earcut": "^3.2.4",
     "ol": "^10.11.0",
     "proj4": "^2.23.0"
   }

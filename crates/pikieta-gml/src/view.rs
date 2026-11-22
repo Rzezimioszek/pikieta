@@ -170,6 +170,7 @@ impl GmlDocument {
             "label": self.features.iter().map(|f| f.label.as_str()).collect::<Vec<_>>(),
             "id": self.features.iter().map(|f| f.id.as_str()).collect::<Vec<_>>(),
             "geom": self.features.iter().map(|f| geom_code(f.geometry.as_ref())).collect::<Vec<_>>(),
+            "variant": self.features.iter().map(|f| f.variant).collect::<Vec<_>>(),
             "epsg": self.epsg(),
             "errors": errors,
         })

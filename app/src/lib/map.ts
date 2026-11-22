@@ -195,7 +195,8 @@ export function createMap(target: HTMLElement, crs: string, cb: Callbacks): MapH
       hitTolerance: 8,
     })
     const ev = e.originalEvent as MouseEvent
-    const gmlHit = hit ? null : gmlLayers.pick(e.coordinate, 5 * map.getView().getResolution()!)
+    const res = map.getView().getResolution()!
+    const gmlHit = hit ? null : gmlLayers.pick(e.coordinate, 5 * res, res)
     cb.onClick(toGeo(e.coordinate), hit ?? null, ev.ctrlKey || ev.metaKey || ev.shiftKey, gmlHit ?? null)
   })
   target.addEventListener('pointerleave', () => cb.onPointer(null))

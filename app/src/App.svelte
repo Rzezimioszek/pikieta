@@ -129,7 +129,7 @@
       untrack(() => {
         handle!.setGmlLayer(
           l.id,
-          { decoded: l.decoded!, classes: l.index!.classes, cls: l.index!.cls, labels: l.index!.label },
+          { decoded: l.decoded!, classes: l.index!.classes, cls: l.index!.cls, labels: l.index!.label, variant: l.index!.variant },
           l.visible,
           l.hidden,
         )
@@ -444,7 +444,8 @@
     align-items: center;
     gap: 6px;
     padding: 4px 12px;
-    border: none;
+    /* Przezroczysta ramka, żeby aktywna karta nie przesuwała sąsiednich. */
+    border: 1px solid transparent;
     border-radius: 10px;
     background: transparent;
     font-size: 0.8rem;
@@ -455,7 +456,7 @@
   .docktabs button.on {
     background: var(--field-bg);
     color: var(--ink);
-    box-shadow: inset 0 -2px 0 var(--accent);
+    border-color: var(--accent);
   }
   .reopen {
     justify-self: start;

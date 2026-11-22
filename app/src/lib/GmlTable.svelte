@@ -2,6 +2,7 @@
   import DataTable from './DataTable.svelte'
   import Icon from './Icon.svelte'
   import { engine, type ClassTable } from './gml-engine'
+  import { note } from './perf'
   import {
     className,
     featureKey,
@@ -41,15 +42,20 @@
 
   // Atrybuty klasy pobierane z silnika dopiero, gdy klasa jest pokazana.
   $effect(() => {
-    const [doc, c, ready] = [layer.doc, cls, layer.status === 'ready']
+    // Najpierw geometria dla mapy (silnik wykonuje zadania po kolei), potem atrybuty tabeli.
+    const [doc, c, ready] = [layer.doc, cls, layer.status === 'ready' && layer.geomRev > 0]
     data = null
     error = ''
     if (!ready || !c) return
     loading = true
     let stale = false
+    const t0 = performance.now()
     engine
       .classTable(doc, c)
-      .then((t) => !stale && (data = t))
+      .then((t) => {
+        note(`tabela klasy ${c}`, t0)
+        if (!stale) data = t
+      })
       .catch((e) => !stale && (error = String(e)))
       .finally(() => !stale && (loading = false))
     return () => (stale = true)

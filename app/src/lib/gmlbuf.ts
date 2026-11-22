@@ -28,9 +28,7 @@ export function decode(buf: ArrayBuffer): Decoded {
 }
 
 export type Part =
-  | { t: 'point'; c: number }
-  | { t: 'line'; c: number; n: number }
-  | { t: 'polygon'; rings: [number, number][] }
+  { t: 'point'; c: number } | { t: 'line'; c: number; n: number } | { t: 'polygon'; rings: [number, number][] }
 
 /** Części geometrii obiektu (numery par współrzędnych). */
 export function parts(d: Decoded, i: number): Part[] {
@@ -68,4 +66,28 @@ export function vertices(d: Decoded, i: number): { x: number; y: number }[] {
     else for (const [c, n] of p.rings) add(c, n)
   }
   return out
+}
+
+/**
+ * Przechodzi po ciągach współrzędnych obiektu bez tworzenia obiektów pośrednich:
+ * `kind` 1 punkt, 2 linia, 3 pierścień wieloboku (`ring` = numer pierścienia w części).
+ */
+export function forEachSpan(d: Decoded, i: number, fn: (kind: number, start: number, n: number, ring: number) => void) {
+  const ops = d.ops
+  let at = d.start[i]
+  const parts = ops[at++]
+  for (let p = 0; p < parts; p++) {
+    const kind = ops[at]
+    if (kind === 1) {
+      fn(1, ops[at + 1], 1, 0)
+      at += 2
+    } else if (kind === 2) {
+      fn(2, ops[at + 1], ops[at + 2], 0)
+      at += 3
+    } else {
+      const r = ops[at + 1]
+      for (let k = 0; k < r; k++) fn(3, ops[at + 2 + 2 * k], ops[at + 3 + 2 * k], k)
+      at += 2 + 2 * r
+    }
+  }
 }

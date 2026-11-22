@@ -10,6 +10,8 @@ export interface GmlIndex {
   id: string[]
   /** 0 brak, 1 punkt, 2 linia, 3 wielobok, 4 wieloczęściowa. */
   geom: number[]
+  /** Wariant stylu (bity `VARIANT_*`), np. punkt graniczny dokładny lub stabilizowany. */
+  variant: number[]
   epsg: number | null
   /** Błędy geometrii: numer obiektu → opis. */
   errors: Record<string, string>

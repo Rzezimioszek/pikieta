@@ -5,6 +5,7 @@ import { epsgOf, type Pt, type XY } from './core'
 import { engine, type GmlIndex, type GmlIssue, type GmlSource } from './gml-engine'
 import { decode, parts, vertices, type Decoded } from './gmlbuf'
 import { saveText, type FileType } from './files.svelte'
+import { note } from './perf'
 import { addPoints, findPoint, notify, project, ui } from './project.svelte'
 import { points_to_gml } from './wasm/pikieta.js'
 
@@ -167,7 +168,9 @@ export function persistLayer(l: GmlLayer) {
 async function load(layer: GmlLayer, src: GmlSource) {
   layer.status = 'loading'
   try {
+    const t0 = performance.now()
     const opened = await engine.open(src)
+    note('wczytanie i parsowanie GML (silnik)', t0)
     layer.doc = opened.id
     const index = opened.index
     for (const [i, k, v] of layer.edits) index.label[i] = await engine.setProperty(opened.id, i, k, v)
@@ -186,7 +189,9 @@ export async function render(layer: GmlLayer) {
   if (layer.status !== 'ready') return
   const epsg = epsgOf(project.crs)
   if (layer.decoded && layer.renderedEpsg === epsg) return
+  const t0 = performance.now()
   const buf = await engine.render(layer.doc, epsg)
+  note('bufor geometrii (silnik)', t0)
   layer.decoded = decode(buf)
   layer.renderedEpsg = epsg
   layer.geomRev++
