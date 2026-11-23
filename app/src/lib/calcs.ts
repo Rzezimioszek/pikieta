@@ -16,6 +16,7 @@ export type CalcType =
   | 'resection'
   | 'angleInt'
   | 'combinedInt'
+  | 'construct'
 
 export interface AzimuthData {
   rows: { from: string; to: string }[]
@@ -52,6 +53,21 @@ export interface LineIntData {
 }
 export interface AreaData {
   rows: { id: string }[]
+}
+export interface ConstructData {
+  mode: 'lineCircle' | 'parallel' | 'divide' | 'foot'
+  a: string
+  b: string
+  /** Środek okręgu, punkt rzutowany albo początek prostej przecinającej. */
+  c: string
+  /** Koniec prostej przecinającej (tryb równoległej). */
+  d: string
+  /** Promień, odsunięcie, liczba części albo krok [m]. */
+  value: string
+  side: 'left' | 'right'
+  /** Podział: na części albo co krok. */
+  divideBy: 'parts' | 'step'
+  firstId: string
 }
 export interface CombinedIntData {
   id: string
@@ -181,6 +197,27 @@ export const CALCS: Record<CalcType, CalcInfo> = {
         ? `Przecięcie ${d.a.trim()}–${d.b.trim()} × ${d.c.trim()}–${d.d.trim()}`
         : 'Przecięcie prostych',
   },
+  construct: {
+    label: 'Konstrukcje',
+    short: 'Konstrukcje',
+    icon: 'construct',
+    hint: 'Przecięcie prostej z okręgiem, prosta równoległa, podział odcinka, spodek prostopadłej.',
+    init: (): ConstructData => ({
+      mode: 'lineCircle',
+      a: '',
+      b: '',
+      c: '',
+      d: '',
+      value: '',
+      side: 'right',
+      divideBy: 'parts',
+      firstId: '',
+    }),
+    title: (d: ConstructData) => {
+      const names = { lineCircle: 'Prosta i okrąg', parallel: 'Równoległa', divide: 'Podział', foot: 'Prostopadła' }
+      return filled(d.a, d.b) ? `${names[d.mode]} ${d.a.trim()}–${d.b.trim()}` : 'Konstrukcje'
+    },
+  },
   combinedInt: {
     label: 'Wcięcie z wyrównaniem',
     short: 'Kombinowane',
@@ -282,6 +319,7 @@ export const CALC_GROUPS: { label: string; types: CalcType[] }[] = [
   { label: 'Pomiary', types: ['tachy', 'stakeout'] },
   { label: 'Domiary', types: ['offset', 'fromOffset'] },
   { label: 'Wcięcia', types: ['distInt', 'angleInt', 'combinedInt', 'lineInt', 'resection'] },
+  { label: 'Konstrukcje', types: ['construct'] },
   { label: 'Pola', types: ['area'] },
 ]
 

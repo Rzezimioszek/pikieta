@@ -583,3 +583,46 @@ pub fn intersection_lsq(
     })
     .to_string())
 }
+
+fn flat_points(pts: &[Point2]) -> Vec<f64> {
+    pts.iter().flat_map(|p| [p.x, p.y]).collect()
+}
+
+/// Przecięcie prostej A→B z okręgiem (`[xa, ya, xb, yb, xc, yc]`, promień). Zwraca `[x1, y1, x2, y2]`.
+#[wasm_bindgen]
+pub fn line_circle(coords: &[f64], r: f64) -> Vec<f64> {
+    match points_from_flat(coords).as_slice() {
+        [a, b, c] => flat_points(&pikieta_calc::line_circle(*a, *b, *c, r)),
+        _ => vec![],
+    }
+}
+
+/// Przecięcie prostej równoległej do A→B (odsunięcie w prawo dodatnie) z prostą C→D.
+#[wasm_bindgen]
+pub fn parallel_intersection(coords: &[f64], offset: f64) -> Option<Vec<f64>> {
+    match points_from_flat(coords).as_slice() {
+        [a, b, c, d] => {
+            pikieta_calc::parallel_intersection(*a, *b, offset, *c, *d).map(|p| vec![p.x, p.y])
+        }
+        _ => None,
+    }
+}
+
+/// Podział odcinka A→B: na `n` części albo (gdy `step` > 0) co `step` metrów.
+#[wasm_bindgen]
+pub fn divide_segment(coords: &[f64], n: usize, step: f64) -> Vec<f64> {
+    match points_from_flat(coords).as_slice() {
+        [a, b] if step > 0.0 => flat_points(&pikieta_calc::divide_every(*a, *b, step)),
+        [a, b] => flat_points(&pikieta_calc::divide(*a, *b, n)),
+        _ => vec![],
+    }
+}
+
+/// Spodek prostopadłej z P na prostą A→B (`[xa, ya, xb, yb, xp, yp]`).
+#[wasm_bindgen]
+pub fn perpendicular_foot(coords: &[f64]) -> Option<Vec<f64>> {
+    match points_from_flat(coords).as_slice() {
+        [a, b, p] => pikieta_calc::foot(*a, *b, *p).map(|q| vec![q.x, q.y]),
+        _ => None,
+    }
+}

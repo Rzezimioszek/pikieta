@@ -98,6 +98,32 @@ export function intersectionLsq(obs: IntObs[], sigmaCc: number, sigmaMm: number,
   }
 }
 
+const pointList = (a: Float64Array | number[]): XY[] => {
+  const out: XY[] = []
+  for (let i = 0; i + 1 < a.length; i += 2) out.push({ x: a[i], y: a[i + 1] })
+  return out
+}
+
+/** Przecięcie prostej A→B z okręgiem o środku C (0, 1 albo 2 punkty, wzdłuż prostej od A). */
+export function lineCircle(a: XY, b: XY, c: XY, r: number): XY[] {
+  return pointList(w.line_circle(flat([a, b, c]), r))
+}
+
+/** Przecięcie prostej równoległej do A→B (odsunięcie w prawo dodatnie) z prostą C→D. */
+export function parallelIntersection(a: XY, b: XY, offset: number, c: XY, d: XY): XY | null {
+  return xy(w.parallel_intersection(flat([a, b, c, d]), offset))
+}
+
+/** Podział odcinka A→B na n części albo co `step` m (gdy step > 0). */
+export function divideSegment(a: XY, b: XY, n: number, step: number): XY[] {
+  return pointList(w.divide_segment(flat([a, b]), n, step))
+}
+
+/** Spodek prostopadłej z P na prostą A→B. */
+export function perpendicularFoot(a: XY, b: XY, p: XY): XY | null {
+  return xy(w.perpendicular_foot(flat([a, b, p])))
+}
+
 export function distanceIntersection(a: XY, ra: number, b: XY, rb: number): { left: XY; right: XY } | null {
   const r = w.distance_intersection(a.x, a.y, ra, b.x, b.y, rb)
   return r ? { left: xy(r, 0)!, right: xy(r, 2)! } : null

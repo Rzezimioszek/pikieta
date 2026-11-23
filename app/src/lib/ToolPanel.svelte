@@ -10,6 +10,7 @@
   import { CALCS, calcTitle, type CalcType } from './calcs'
   import AngleInt from './calcs/AngleInt.svelte'
   import CombinedInt from './calcs/CombinedInt.svelte'
+  import Construct from './calcs/Construct.svelte'
   import Area from './calcs/Area.svelte'
   import Azimuth from './calcs/Azimuth.svelte'
   import DistInt from './calcs/DistInt.svelte'
@@ -51,6 +52,7 @@
     resection: Resection,
     angleInt: AngleInt,
     combinedInt: CombinedInt,
+    construct: Construct,
   }
 
   const session = $derived(ui.active?.kind === 'calc' ? findCalc(ui.active.id) : undefined)

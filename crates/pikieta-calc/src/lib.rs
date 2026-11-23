@@ -5,7 +5,9 @@
 use pikieta_core::Point2;
 use std::f64::consts::TAU;
 
+mod construct;
 mod intersection;
+pub use construct::{divide, divide_every, foot, line_circle, parallel_intersection};
 mod resection;
 pub use intersection::{intersection, IntersectionResult, Observation};
 mod stakeout;

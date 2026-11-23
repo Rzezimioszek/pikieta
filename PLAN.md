@@ -203,7 +203,9 @@ Zrobione (22.11.2026):
 
 - wcięcie z wyrównaniem (24.11.2026): dowolny zestaw kątów (na punkcie znanym od nawiązania do punktu) i długości z punktów znanych, czyli wcięcia kątowe, liniowe, kombinowane i biegunowe; wyrównanie MNK z wagami z błędów średnich kąta i długości, poprawki w cc i mm, m₀, mx, my; punkt startowy z przecięć par obserwacji; bez obserwacji nadliczbowych lista rozwiązań ścisłych do wyboru.
 
-Następne w etapie 4a: konstrukcje (prostopadła, równoległa, przecięcie prostej z okręgiem), transformacje płaskie; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
+- konstrukcje (24.11.2026): przecięcie prostej z okręgiem, prosta równoległa (odsunięcie w lewo lub prawo) przecięta drugą prostą, podział odcinka na części lub co krok, spodek prostopadłej; numeracja wyników od pierwszego numeru (K1, K2, …).
+
+Następne w etapie 4a: transformacje płaskie (Helmert, afiniczna, Hausbrandt); w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
 
 ## Usługi mapowe
 
