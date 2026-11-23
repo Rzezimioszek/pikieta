@@ -193,7 +193,9 @@ Zrobione (22.11.2026):
 - ciąg poligonowy w `pikieta-calc`: dwustronnie nawiązany, zamknięty i wiszący, kąty lewe lub prawe; odchyłka kątowa i odchyłki przyrostów, wyrównanie przybliżone (poprawki kątów po równo, przyrostów proporcjonalnie do długości boków); testy na danych bez błędów, z błędem kąta i boku, kątach prawych, ciągu zamkniętym i wiszącym;
 - zadanie „Ciąg” w grupie Osnowa: wiersze od punktu początkowego (kąt na punkcie, bok do następnego), opcjonalna redukcja odwzorowawcza długości (skala boku z położenia przybliżonego, drugi przebieg), odchyłka kątowa dopuszczalna 2·mα·√n i względna liniowa 1 : N wpisywane przez użytkownika, nowe punkty do projektu, raport z poprawkami i przyrostami.
 
-Następne w etapie 4a: tachimetria, tyczenie, wcięcie wstecz.
+- tachimetria (24.11.2026): orientacja stanowiska na jedno lub więcej nawiązań (stała jako średnia ważona długościami celowych, odchyłki w cc), pikiety z kierunku, kąta zenitalnego, odległości skośnej, wysokości instrumentu i celu; poprawka na krzywiznę i refrakcję (k = 0,13), opcjonalne redukcje odległości na elipsoidę i odwzorowawcza; pusta wysokość celu przejmowana z wiersza wyżej; punkty z kodami i wysokościami do projektu, raport.
+
+Następne w etapie 4a: tyczenie, wcięcie wstecz; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
 
 ## Usługi mapowe
 

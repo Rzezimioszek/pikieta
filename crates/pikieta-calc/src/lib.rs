@@ -5,7 +5,9 @@
 use pikieta_core::Point2;
 use std::f64::consts::TAU;
 
+mod tachymetry;
 mod traverse;
+pub use tachymetry::{orientation, shot, Orientation, Shot, ShotOptions, ShotResult, Station};
 pub use traverse::{traverse, Traverse, TraverseKind, TraverseResult};
 
 /// Poniżej tej wartości sinusa kąta między kierunkami proste uznajemy za równoległe.

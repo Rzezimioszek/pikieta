@@ -387,3 +387,69 @@ pub fn traverse(
     })
     .to_string())
 }
+
+/// Orientacja stanowiska. `refs` to trójki `[x, y, kierunek_g]` nawiązań. Zwraca
+/// `[stała_g, odchyłka1_g, długość1, odchyłka2_g, długość2, ...]` albo błąd.
+#[wasm_bindgen]
+pub fn tachy_orientation(xs: f64, ys: f64, refs: &[f64]) -> Result<Vec<f64>, JsError> {
+    let list: Vec<(Point2, f64)> = refs
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|r| (Point2::new(r[0], r[1]), grad_to_rad(r[2])))
+        .collect();
+    let o = pikieta_calc::orientation(Point2::new(xs, ys), &list).map_err(|e| JsError::new(&e))?;
+    let mut out = vec![rad_to_grad(o.constant)];
+    for (r, d) in o.residuals.iter().zip(&o.distances) {
+        out.extend([rad_to_grad(*r), *d]);
+    }
+    Ok(out)
+}
+
+/// Pikieta tachimetryczna. Brak wysokości stanowiska lub kąta zenitalnego jako NaN.
+/// Zwraca `[x, y, azymut_g, odl_pozioma, odl_zredukowana, przewyższenie, wysokość]` (NaN, gdy brak).
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn tachy_shot(
+    xs: f64,
+    ys: f64,
+    station_h: f64,
+    instrument: f64,
+    constant_grad: f64,
+    hz_grad: f64,
+    zenith_grad: f64,
+    distance: f64,
+    target: f64,
+    curvature: bool,
+    to_ellipsoid: bool,
+    scale: f64,
+) -> Result<Vec<f64>, JsError> {
+    let opt = |v: f64| v.is_finite().then_some(v);
+    let st = pikieta_calc::Station {
+        at: Point2::new(xs, ys),
+        height: opt(station_h),
+        instrument,
+    };
+    let m = pikieta_calc::Shot {
+        hz: grad_to_rad(hz_grad),
+        zenith: opt(zenith_grad).map(grad_to_rad),
+        distance,
+        target,
+    };
+    let o = pikieta_calc::ShotOptions {
+        curvature,
+        to_ellipsoid,
+        scale,
+    };
+    let r = pikieta_calc::shot(&st, grad_to_rad(constant_grad), &m, &o)
+        .map_err(|e| JsError::new(&e))?;
+    Ok(vec![
+        r.point.x,
+        r.point.y,
+        rad_to_grad(r.azimuth),
+        r.horizontal,
+        r.reduced,
+        r.dh.unwrap_or(f64::NAN),
+        r.height.unwrap_or(f64::NAN),
+    ])
+}

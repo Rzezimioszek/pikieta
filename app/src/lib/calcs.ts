@@ -2,7 +2,8 @@
 import type { IconName } from './icons'
 import type { CalcSession } from './project.svelte'
 
-export type CalcType = 'azimuth' | 'polar' | 'offset' | 'fromOffset' | 'distInt' | 'lineInt' | 'area' | 'traverse'
+export type CalcType =
+  'azimuth' | 'polar' | 'offset' | 'fromOffset' | 'distInt' | 'lineInt' | 'area' | 'traverse' | 'tachy'
 
 export interface AzimuthData {
   rows: { from: string; to: string }[]
@@ -39,6 +40,18 @@ export interface LineIntData {
 }
 export interface AreaData {
   rows: { id: string }[]
+}
+export interface TachyData {
+  station: string
+  /** Wysokość stanowiska; puste: z punktu w projekcie. */
+  stationH: string
+  instrument: string
+  /** Poprawka na krzywiznę Ziemi i refrakcję. */
+  curvature: 'yes' | 'no'
+  /** Redukcja na elipsoidę i odwzorowawcza. */
+  reduce: 'yes' | 'no'
+  refs: { id: string; hz: string }[]
+  rows: { id: string; code: string; hz: string; v: string; s: string; target: string }[]
 }
 export interface TraverseData {
   /** Dwustronnie nawiązany, zamknięty albo wiszący. */
@@ -126,6 +139,22 @@ export const CALCS: Record<CalcType, CalcInfo> = {
         ? `Przecięcie ${d.a.trim()}–${d.b.trim()} × ${d.c.trim()}–${d.d.trim()}`
         : 'Przecięcie prostych',
   },
+  tachy: {
+    label: 'Tachimetria',
+    short: 'Tachimetria',
+    icon: 'tachy',
+    hint: 'Orientacja stanowiska na nawiązania i pikiety z kierunku, kąta zenitalnego i odległości skośnej.',
+    init: (): TachyData => ({
+      station: '',
+      stationH: '',
+      instrument: '',
+      curvature: 'yes',
+      reduce: 'no',
+      refs: [{ id: '', hz: '' }],
+      rows: [{ id: '', code: '', hz: '', v: '', s: '', target: '' }],
+    }),
+    title: (d: TachyData) => (d.station.trim() ? `Tachimetria ze st. ${d.station.trim()}` : 'Tachimetria'),
+  },
   traverse: {
     label: 'Ciąg poligonowy',
     short: 'Ciąg',
@@ -163,6 +192,7 @@ export const CALCS: Record<CalcType, CalcInfo> = {
 export const CALC_GROUPS: { label: string; types: CalcType[] }[] = [
   { label: 'Podstawowe', types: ['azimuth', 'polar'] },
   { label: 'Osnowa', types: ['traverse'] },
+  { label: 'Pomiary', types: ['tachy'] },
   { label: 'Domiary', types: ['offset', 'fromOffset'] },
   { label: 'Wcięcia', types: ['distInt', 'lineInt'] },
   { label: 'Pola', types: ['area'] },

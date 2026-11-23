@@ -111,11 +111,60 @@ export function traverse(
 ): TraverseOut {
   const k = [known.back, known.start, known.end, known.forward].flatMap((p) => (p ? [p.x, p.y] : [NaN, NaN]))
   const r = JSON.parse(
-    w.traverse(TRAVERSE_KIND[kind], new Float64Array(k), new Float64Array(anglesGrad), new Float64Array(distances), right),
+    w.traverse(
+      TRAVERSE_KIND[kind],
+      new Float64Array(k),
+      new Float64Array(anglesGrad),
+      new Float64Array(distances),
+      right,
+    ),
   )
   const pts: XY[] = []
   for (let i = 0; i < r.points.length; i += 2) pts.push({ x: r.points[i], y: r.points[i + 1] })
   return { ...r, points: pts }
+}
+
+/** Orientacja stanowiska: stała [g] i dla każdego nawiązania odchyłka [g] oraz długość celowej. */
+export function tachyOrientation(station: XY, refs: { p: XY; hz: number }[]) {
+  const r = w.tachy_orientation(station.x, station.y, new Float64Array(refs.flatMap((x) => [x.p.x, x.p.y, x.hz])))
+  return {
+    constant: r[0],
+    refs: refs.map((_, i) => ({ residual: r[1 + 2 * i], distance: r[2 + 2 * i] })),
+  }
+}
+
+export interface TachyShot {
+  p: XY
+  azimuth: number
+  horizontal: number
+  reduced: number
+  dh: number | null
+  h: number | null
+}
+
+/** Pikieta ze stanowiska zorientowanego stałą [g]. Kąty w gradach; brak wartości jako null. */
+export function tachyShot(
+  station: XY & { h: number | null; instrument: number },
+  constant: number,
+  m: { hz: number; zenith: number | null; distance: number; target: number },
+  o: { curvature: boolean; toEllipsoid: boolean; scale: number },
+): TachyShot {
+  const r = w.tachy_shot(
+    station.x,
+    station.y,
+    station.h ?? NaN,
+    station.instrument,
+    constant,
+    m.hz,
+    m.zenith ?? NaN,
+    m.distance,
+    m.target,
+    o.curvature,
+    o.toEllipsoid,
+    o.scale,
+  )
+  const n = (v: number) => (Number.isNaN(v) ? null : v)
+  return { p: { x: r[0], y: r[1] }, azimuth: r[2], horizontal: r[3], reduced: r[4], dh: n(r[5]), h: n(r[6]) }
 }
 
 export function parsePoints(text: string, yx: boolean): { points: Pt[]; errors: string[] } {
