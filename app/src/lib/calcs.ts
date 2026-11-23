@@ -3,7 +3,17 @@ import type { IconName } from './icons'
 import type { CalcSession } from './project.svelte'
 
 export type CalcType =
-  'azimuth' | 'polar' | 'offset' | 'fromOffset' | 'distInt' | 'lineInt' | 'area' | 'traverse' | 'tachy' | 'stakeout'
+  | 'azimuth'
+  | 'polar'
+  | 'offset'
+  | 'fromOffset'
+  | 'distInt'
+  | 'lineInt'
+  | 'area'
+  | 'traverse'
+  | 'tachy'
+  | 'stakeout'
+  | 'resection'
 
 export interface AzimuthData {
   rows: { from: string; to: string }[]
@@ -40,6 +50,10 @@ export interface LineIntData {
 }
 export interface AreaData {
   rows: { id: string }[]
+}
+export interface ResectionData {
+  id: string
+  rows: { id: string; hz: string }[]
 }
 export interface StakeoutData {
   station: string
@@ -148,6 +162,17 @@ export const CALCS: Record<CalcType, CalcInfo> = {
         ? `Przecięcie ${d.a.trim()}–${d.b.trim()} × ${d.c.trim()}–${d.d.trim()}`
         : 'Przecięcie prostych',
   },
+  resection: {
+    label: 'Wcięcie wstecz',
+    short: 'Wstecz',
+    icon: 'resection',
+    hint: 'Stanowisko z kierunków na co najmniej trzy punkty znane; przy większej liczbie z wyrównaniem.',
+    init: (): ResectionData => ({ id: '', rows: [{ id: '', hz: '' }] }),
+    title: (d: ResectionData) => {
+      const ids = d.rows.map((r) => r.id.trim()).filter(Boolean)
+      return ids.length >= 3 ? `Wcięcie wstecz na ${ids.slice(0, 4).join(', ')}` : 'Wcięcie wstecz'
+    },
+  },
   stakeout: {
     label: 'Tyczenie',
     short: 'Tyczenie',
@@ -211,7 +236,7 @@ export const CALC_GROUPS: { label: string; types: CalcType[] }[] = [
   { label: 'Osnowa', types: ['traverse'] },
   { label: 'Pomiary', types: ['tachy', 'stakeout'] },
   { label: 'Domiary', types: ['offset', 'fromOffset'] },
-  { label: 'Wcięcia', types: ['distInt', 'lineInt'] },
+  { label: 'Wcięcia', types: ['distInt', 'lineInt', 'resection'] },
   { label: 'Pola', types: ['area'] },
 ]
 

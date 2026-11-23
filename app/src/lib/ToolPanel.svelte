@@ -15,6 +15,7 @@
   import LineInt from './calcs/LineInt.svelte'
   import Offset from './calcs/Offset.svelte'
   import Polar from './calcs/Polar.svelte'
+  import Resection from './calcs/Resection.svelte'
   import Stakeout from './calcs/Stakeout.svelte'
   import Tachy from './calcs/Tachy.svelte'
   import Traverse from './calcs/Traverse.svelte'
@@ -45,6 +46,7 @@
     traverse: Traverse,
     tachy: Tachy,
     stakeout: Stakeout,
+    resection: Resection,
   }
 
   const session = $derived(ui.active?.kind === 'calc' ? findCalc(ui.active.id) : undefined)

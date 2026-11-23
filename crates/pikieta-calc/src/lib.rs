@@ -5,7 +5,9 @@
 use pikieta_core::Point2;
 use std::f64::consts::TAU;
 
+mod resection;
 mod stakeout;
+pub use resection::{resection, ResectionResult};
 mod tachymetry;
 pub use stakeout::{grid_to_terrain, stakeout, StakeoutElements};
 mod traverse;

@@ -476,3 +476,30 @@ pub fn stakeout(coords: &[f64], ref_reading_grad: f64) -> Option<Vec<f64>> {
 pub fn grid_to_terrain(grid: f64, scale: f64, height: f64) -> f64 {
     pikieta_calc::grid_to_terrain(grid, scale, height.is_finite().then_some(height))
 }
+
+/// Wcięcie wstecz. `obs` to trójki `[x, y, odczyt_g]` punktów znanych (co najmniej trzy).
+/// Zwraca `[x, y, stała_g, m0_cc, mx, my, wskaźnik_okręgu, odchyłka1_cc, odchyłka2_cc, ...]`
+/// (m0, mx, my jako NaN bez obserwacji nadliczbowych) albo błąd.
+#[wasm_bindgen]
+pub fn resection(obs: &[f64]) -> Result<Vec<f64>, JsError> {
+    let list: Vec<(Point2, f64)> = obs
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|r| (Point2::new(r[0], r[1]), grad_to_rad(r[2])))
+        .collect();
+    let r = pikieta_calc::resection(&list).map_err(|e| JsError::new(&e))?;
+    let cc = |rad: f64| rad_to_grad(rad) * 10_000.0;
+    let (mx, my) = r.mxy.unwrap_or((f64::NAN, f64::NAN));
+    let mut out = vec![
+        r.point.x,
+        r.point.y,
+        rad_to_grad(r.orientation),
+        r.m0.map_or(f64::NAN, cc),
+        mx,
+        my,
+        r.danger,
+    ];
+    out.extend(r.residuals.iter().map(|v| cc(*v)));
+    Ok(out)
+}

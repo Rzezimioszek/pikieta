@@ -178,6 +178,21 @@ export function gridToTerrain(grid: number, scale: number, height: number | null
   return w.grid_to_terrain(grid, scale, height ?? NaN)
 }
 
+/** Wcięcie wstecz z odczytów [g] na co najmniej trzy punkty znane. Rzuca wyjątek z opisem błędu. */
+export function resection(obs: { p: XY; reading: number }[]) {
+  const r = w.resection(new Float64Array(obs.flatMap((o) => [o.p.x, o.p.y, o.reading])))
+  const n = (v: number) => (Number.isNaN(v) ? null : v)
+  return {
+    p: { x: r[0], y: r[1] },
+    orientation: r[2],
+    m0cc: n(r[3]),
+    mx: n(r[4]),
+    my: n(r[5]),
+    danger: r[6],
+    residualsCc: Array.from(r.slice(7)),
+  }
+}
+
 export function parsePoints(text: string, yx: boolean): { points: Pt[]; errors: string[] } {
   const r = w.parse_points(text, yx)
   const [ids, coords, codes, errors] = [r.ids, r.coords, r.codes, r.errors]

@@ -197,7 +197,9 @@ Zrobione (22.11.2026):
 
 - tyczenie (24.11.2026): elementy biegunowe ze stanowiska zorientowanego na nawiązanie z dowolnym odczytem koła: odczyt Hz do ustawienia, kąt od nawiązania, azymut, długość ze współrzędnych i opcjonalnie w terenie (odwrócenie redukcji odwzorowawczej i na elipsoidę), ΔH dla punktów z wysokością; wstawianie zaznaczonych punktów, raport; test, że wytyczony punkt zmierzony tachimetrycznie trafia w punkt projektowany.
 
-Następne w etapie 4a: wcięcie wstecz; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
+- wcięcie wstecz (24.11.2026): z trzech kierunków rozwiązanie ścisłe jako drugie przecięcie dwóch okręgów (działa wewnątrz i na zewnątrz trójkąta, bez punktu startowego), z czterech i więcej wyrównanie metodą najmniejszych kwadratów (X, Y, stała orientacji) z odchyłkami, m₀ i mx, my; ostrzeżenie przy stanowisku blisko okręgu niebezpiecznego; zadanie w grupie Wcięcia, raport.
+
+Następne w etapie 4a: wcięcie kątowe w przód z kątów pomierzonych, wcięcie kombinowane i z wyrównaniem, konstrukcje (prostopadła, równoległa, przecięcie prostej z okręgiem), transformacje płaskie; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
 
 ## Usługi mapowe
 
