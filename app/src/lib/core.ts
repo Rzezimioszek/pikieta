@@ -167,6 +167,17 @@ export function tachyShot(
   return { p: { x: r[0], y: r[1] }, azimuth: r[2], horizontal: r[3], reduced: r[4], dh: n(r[5]), h: n(r[6]) }
 }
 
+/** Elementy tyczenia [g, m]; null, gdy punkty się pokrywają. */
+export function stakeout(station: XY, reference: XY, refReading: number, target: XY) {
+  const r = w.stakeout(flat([station, reference, target]), refReading)
+  return r ? { azimuth: r[0], reading: r[1], angle: r[2], grid: r[3] } : null
+}
+
+/** Długość w układzie na długość do odmierzenia w terenie. */
+export function gridToTerrain(grid: number, scale: number, height: number | null): number {
+  return w.grid_to_terrain(grid, scale, height ?? NaN)
+}
+
 export function parsePoints(text: string, yx: boolean): { points: Pt[]; errors: string[] } {
   const r = w.parse_points(text, yx)
   const [ids, coords, codes, errors] = [r.ids, r.coords, r.codes, r.errors]

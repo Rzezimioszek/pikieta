@@ -5,7 +5,9 @@
 use pikieta_core::Point2;
 use std::f64::consts::TAU;
 
+mod stakeout;
 mod tachymetry;
+pub use stakeout::{grid_to_terrain, stakeout, StakeoutElements};
 mod traverse;
 pub use tachymetry::{orientation, shot, Orientation, Shot, ShotOptions, ShotResult, Station};
 pub use traverse::{traverse, Traverse, TraverseKind, TraverseResult};

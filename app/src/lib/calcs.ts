@@ -3,7 +3,7 @@ import type { IconName } from './icons'
 import type { CalcSession } from './project.svelte'
 
 export type CalcType =
-  'azimuth' | 'polar' | 'offset' | 'fromOffset' | 'distInt' | 'lineInt' | 'area' | 'traverse' | 'tachy'
+  'azimuth' | 'polar' | 'offset' | 'fromOffset' | 'distInt' | 'lineInt' | 'area' | 'traverse' | 'tachy' | 'stakeout'
 
 export interface AzimuthData {
   rows: { from: string; to: string }[]
@@ -39,6 +39,15 @@ export interface LineIntData {
   id: string
 }
 export interface AreaData {
+  rows: { id: string }[]
+}
+export interface StakeoutData {
+  station: string
+  ref: string
+  /** Odczyt koła poziomego na nawiązaniu [g]; puste = 0. */
+  refReading: string
+  /** Długości w terenie (odwrócenie redukcji odwzorowawczej i na elipsoidę). */
+  reduce: 'yes' | 'no'
   rows: { id: string }[]
 }
 export interface TachyData {
@@ -139,6 +148,14 @@ export const CALCS: Record<CalcType, CalcInfo> = {
         ? `Przecięcie ${d.a.trim()}–${d.b.trim()} × ${d.c.trim()}–${d.d.trim()}`
         : 'Przecięcie prostych',
   },
+  stakeout: {
+    label: 'Tyczenie',
+    short: 'Tyczenie',
+    icon: 'stakeout',
+    hint: 'Elementy tyczenia biegunowego: odczyt koła, kąt od nawiązania i długość do odmierzenia.',
+    init: (): StakeoutData => ({ station: '', ref: '', refReading: '', reduce: 'no', rows: [{ id: '' }] }),
+    title: (d: StakeoutData) => (d.station.trim() ? `Tyczenie ze st. ${d.station.trim()}` : 'Tyczenie'),
+  },
   tachy: {
     label: 'Tachimetria',
     short: 'Tachimetria',
@@ -192,7 +209,7 @@ export const CALCS: Record<CalcType, CalcInfo> = {
 export const CALC_GROUPS: { label: string; types: CalcType[] }[] = [
   { label: 'Podstawowe', types: ['azimuth', 'polar'] },
   { label: 'Osnowa', types: ['traverse'] },
-  { label: 'Pomiary', types: ['tachy'] },
+  { label: 'Pomiary', types: ['tachy', 'stakeout'] },
   { label: 'Domiary', types: ['offset', 'fromOffset'] },
   { label: 'Wcięcia', types: ['distInt', 'lineInt'] },
   { label: 'Pola', types: ['area'] },

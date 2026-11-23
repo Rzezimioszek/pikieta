@@ -15,6 +15,7 @@
   import LineInt from './calcs/LineInt.svelte'
   import Offset from './calcs/Offset.svelte'
   import Polar from './calcs/Polar.svelte'
+  import Stakeout from './calcs/Stakeout.svelte'
   import Tachy from './calcs/Tachy.svelte'
   import Traverse from './calcs/Traverse.svelte'
   import type { Sketch } from './map'
@@ -43,6 +44,7 @@
     area: Area,
     traverse: Traverse,
     tachy: Tachy,
+    stakeout: Stakeout,
   }
 
   const session = $derived(ui.active?.kind === 'calc' ? findCalc(ui.active.id) : undefined)

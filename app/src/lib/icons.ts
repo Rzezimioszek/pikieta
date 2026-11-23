@@ -41,6 +41,7 @@ export const ICONS = {
   distInt: `${circle(9, 12, 5)}${circle(15, 12, 5)}`,
   lineInt: `M4 4l16 16M20 4 4 20${circle(12, 12, 2)}`,
   area: 'M5 18 7 6l9-2 4 9-6 7z',
+  stakeout: `${circle(6, 18, 2)}M8 18h10M7.4 16.6 17 7M17 3v8M13 7h8`,
   tachy: 'M9 3h6v6H9zM12 9v3M12 12 6 21M12 12l6 9M12 12v9M15 6h5',
   traverse: `${circle(4, 18, 1.6)}${circle(10, 9, 1.6)}${circle(16, 15, 1.6)}${circle(20, 5, 1.6)}M5 16.6 9 10.4M11.2 10.2l3.6 3.6M16.8 13.5 19.4 6.5`,
   point: circle(12, 12, 3),

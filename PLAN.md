@@ -195,7 +195,9 @@ Zrobione (22.11.2026):
 
 - tachimetria (24.11.2026): orientacja stanowiska na jedno lub więcej nawiązań (stała jako średnia ważona długościami celowych, odchyłki w cc), pikiety z kierunku, kąta zenitalnego, odległości skośnej, wysokości instrumentu i celu; poprawka na krzywiznę i refrakcję (k = 0,13), opcjonalne redukcje odległości na elipsoidę i odwzorowawcza; pusta wysokość celu przejmowana z wiersza wyżej; punkty z kodami i wysokościami do projektu, raport.
 
-Następne w etapie 4a: tyczenie, wcięcie wstecz; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
+- tyczenie (24.11.2026): elementy biegunowe ze stanowiska zorientowanego na nawiązanie z dowolnym odczytem koła: odczyt Hz do ustawienia, kąt od nawiązania, azymut, długość ze współrzędnych i opcjonalnie w terenie (odwrócenie redukcji odwzorowawczej i na elipsoidę), ΔH dla punktów z wysokością; wstawianie zaznaczonych punktów, raport; test, że wytyczony punkt zmierzony tachimetrycznie trafia w punkt projektowany.
+
+Następne w etapie 4a: wcięcie wstecz; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
 
 ## Usługi mapowe
 

@@ -453,3 +453,26 @@ pub fn tachy_shot(
         r.height.unwrap_or(f64::NAN),
     ])
 }
+
+/// Elementy tyczenia: stanowisko, nawiązanie z odczytem [g] i punkt tyczony.
+/// Zwraca `[azymut_g, odczyt_g, kąt_g, długość_w_układzie]` albo `undefined`, gdy punkty się pokrywają.
+#[wasm_bindgen]
+pub fn stakeout(coords: &[f64], ref_reading_grad: f64) -> Option<Vec<f64>> {
+    let p = points_from_flat(coords);
+    let [st, reference, target] = p.as_slice() else {
+        return None;
+    };
+    let e = pikieta_calc::stakeout(*st, *reference, grad_to_rad(ref_reading_grad), *target)?;
+    Some(vec![
+        rad_to_grad(e.azimuth),
+        rad_to_grad(e.reading),
+        rad_to_grad(e.angle),
+        e.grid,
+    ])
+}
+
+/// Długość w układzie na długość do odmierzenia w terenie (wysokość NaN: bez redukcji na elipsoidę).
+#[wasm_bindgen]
+pub fn grid_to_terrain(grid: f64, scale: f64, height: f64) -> f64 {
+    pikieta_calc::grid_to_terrain(grid, scale, height.is_finite().then_some(height))
+}
