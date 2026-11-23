@@ -13,6 +13,8 @@
   import { exportPointsGml, gml, importGml, replaceLayers } from './gml.svelte'
   import type { IconName } from './icons'
   import { BASEMAPS, CRS_LIST } from './map'
+  import ServicesMenu from './ServicesMenu.svelte'
+  import { grouped } from './services'
   import {
     notify,
     project,
@@ -220,11 +222,21 @@
             <label class="stack">
               <span>Podkład</span>
               <select bind:value={ui.basemap}>
-                {#each BASEMAPS as b (b.id)}<option value={b.id}>{b.label}</option>{/each}
+                {#each grouped(BASEMAPS) as [group, list] (group)}
+                  <optgroup label={group}>
+                    {#each list as b (b.id)}<option value={b.id}>{b.label}</option>{/each}
+                  </optgroup>
+                {/each}
               </select>
             </label>
           </div>
           <span class="cap">Mapa</span>
+        </div>
+        <div class="group">
+          <div class="btns">
+            <ServicesMenu />
+          </div>
+          <span class="cap">Usługi</span>
         </div>
         <div class="group">
           <div class="btns">

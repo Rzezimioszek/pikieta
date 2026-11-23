@@ -187,6 +187,18 @@ Zrobione (22.11.2026):
 
 Następne w etapie 4a: tachimetria, tyczenie, wcięcie wstecz.
 
+## Usługi mapowe
+
+Zrobione (23.11.2026), katalog w `app/src/lib/services.ts`, wszystkie przez WMS 1.1.1 w układzie projektu:
+
+- podkłady: ortofotomapa standardowa, wysokiej rozdzielczości i prawdziwa, BDOT10k, BDOO, mapa topograficzna, OpenStreetMap, cieniowanie i hipsometria NMT;
+- nakładki (panel „Nakładki” na karcie Mapa, wybór zapamiętywany): KIEG (działki, numery, budynki; użytki i kontury; obręby), KIUT, KIBDOT, osnowa szczegółowa (KISOG), podstawowa osnowa pozioma, stacje ASG-EUPOS, granice PRG, ulice i punkty adresowe, miejscowe plany (KIMP), formy ochrony przyrody (GDOŚ), działki LPIS, różnice wysokości Kronsztadt86–EVRF2007, sekcje map 2000/1992/1965, strefy układu 2000;
+- usługi obsługujące tylko PL-1992 (ortofotomapa HD i prawdziwa, BDOO, KIMP) są pobierane w PL-1992 i przeliczane do układu projektu, gdy usługa zezwala na CORS; usługi bez CORS i bez strefy projektu (sekcje, strefy) są w panelu nieaktywne z opisem;
+- usługi integracyjne (KIEG, KIUT, KIBDOT, KISOG) przekierowują do serwerów powiatów bez nagłówków CORS, więc obraz pobierany jest bez CORS (działa we wszystkich strefach);
+- sprawdzone zapytaniami GetMap dla strefy 6 i 7: wszystkie usługi zwracają obraz; podstawowa osnowa wysokościowa nie odpowiadała, więc jej nie ma; osnowa pozioma odpowiada bardzo wolno.
+
+Do zrobienia: przezroczystość nakładek, legenda (GetLegendGraphic), informacja o obiekcie (GetFeatureInfo), dowolna usługa po adresie URL, WMTS dla szybszych podkładów.
+
 ## Obliczenia do uzupełnienia
 
 Porównanie z zakresem obliczeń C-Geo (instrukcja użytkownika, tomy I i II, oraz wykaz zmian 2013–2022; pliki są tylko lokalnie, w folderze `inspiracje/` wyłączonym z repozytorium). Pikieta ma dziś: azymut i długość, metodę biegunową, rzutowanie na prostą i punkty z domiarów, wcięcie liniowe, przecięcie prostych i kierunków, pole ze współrzędnych z redukcją na elipsoidę oraz przeliczenia PL-2000/1992/UTM.

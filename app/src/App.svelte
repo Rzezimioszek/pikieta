@@ -167,6 +167,7 @@
       ui.basemap = 'orto'
     })
   })
+  $effect(() => handle?.setOverlays(ui.overlays))
   $effect(saveProject)
   $effect(saveUi)
 

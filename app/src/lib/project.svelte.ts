@@ -59,6 +59,8 @@ interface Ui {
   /** Kolejność kolumn w importowanych i eksportowanych plikach: Nr Y X. */
   yx: boolean
   basemap: BasemapId
+  /** Włączone nakładki z katalogu usług (identyfikatory). */
+  overlays: string[]
   addByClick: boolean
   /** Karta dolnej tabeli: `points` albo identyfikator warstwy GML. */
   tableTab: string
@@ -109,6 +111,7 @@ const UI_DEFAULTS: Ui = {
   active: null,
   yx: false,
   basemap: 'orto',
+  overlays: [],
   addByClick: false,
   tableTab: 'points',
 }
