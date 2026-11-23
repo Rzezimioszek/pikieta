@@ -86,6 +86,31 @@ pub fn azimuth_intersection(a: Point2, az_a: f64, b: Point2, az_b: f64) -> Optio
     Some(Point2::new(a.x + t * uax, a.y + t * uay))
 }
 
+/// Wcięcie kątowe w przód: punkt z kątów wewnętrznych trójkąta `alpha` (przy `a`, między kierunkami
+/// na `b` i na punkt) i `beta` (przy `b`, między kierunkami na `a` i na punkt). `left` wybiera stronę
+/// prostej `a → b`, po której leży punkt. `None` dla kątów, których proste się nie przecinają.
+pub fn angle_intersection(
+    a: Point2,
+    b: Point2,
+    alpha: f64,
+    beta: f64,
+    left: bool,
+) -> Option<Point2> {
+    if alpha <= 0.0 || beta <= 0.0 || alpha + beta >= std::f64::consts::PI {
+        return None;
+    }
+    let (az_ab, _) = azimuth_distance(a, b)?;
+    let az_ba = (az_ab + std::f64::consts::PI).rem_euclid(TAU);
+    // Po lewej stronie A→B kierunek z A obraca się przeciwnie do ruchu wskazówek zegara.
+    let s = if left { -1.0 } else { 1.0 };
+    azimuth_intersection(
+        a,
+        (az_ab + s * alpha).rem_euclid(TAU),
+        b,
+        (az_ba - s * beta).rem_euclid(TAU),
+    )
+}
+
 /// Przecięcie prostych `a → b` i `c → d`. `None` dla prostych równoległych
 /// albo gdy któraś para punktów się pokrywa.
 pub fn line_intersection(a: Point2, b: Point2, c: Point2, d: Point2) -> Option<Point2> {
@@ -146,6 +171,24 @@ pub fn area(points: &[Point2]) -> f64 {
 mod tests {
     use super::*;
     use pikieta_core::{grad_to_rad, rad_to_grad};
+
+    #[test]
+    fn angle_intersection_both_sides() {
+        // A na zachodzie, B na wschodzie, kąty 50g: punkt 50 m na północ (lewa strona A→B) albo na południe.
+        let (a, b) = (Point2::new(0.0, 0.0), Point2::new(0.0, 100.0));
+        let g50 = grad_to_rad(50.0);
+        let l = angle_intersection(a, b, g50, g50, true).unwrap();
+        assert!((l.x - 50.0).abs() < 1e-9 && (l.y - 50.0).abs() < 1e-9);
+        let r = angle_intersection(a, b, g50, g50, false).unwrap();
+        assert!((r.x + 50.0).abs() < 1e-9 && (r.y - 50.0).abs() < 1e-9);
+        // Wzór z kotangensami: xP = (xA ctg β + xB ctg α + (yB − yA)) / (ctg α + ctg β).
+        let (alpha, beta) = (grad_to_rad(63.1234), grad_to_rad(48.765));
+        let (ca, cb) = (1.0 / alpha.tan(), 1.0 / beta.tan());
+        let p = angle_intersection(a, b, alpha, beta, true).unwrap();
+        assert!((p.x - (a.x * cb + b.x * ca + (b.y - a.y)) / (ca + cb)).abs() < 1e-9);
+        assert!((p.y - (a.y * cb + b.y * ca - (b.x - a.x)) / (ca + cb)).abs() < 1e-9);
+        assert!(angle_intersection(a, b, grad_to_rad(120.0), grad_to_rad(90.0), true).is_none());
+    }
 
     fn az_grad(a: (f64, f64), b: (f64, f64)) -> (f64, f64) {
         let (az, d) = azimuth_distance(Point2::new(a.0, a.1), Point2::new(b.0, b.1)).unwrap();

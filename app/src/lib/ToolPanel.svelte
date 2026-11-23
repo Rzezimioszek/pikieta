@@ -8,6 +8,7 @@
   import { findLayer, type GmlLayer } from './gml.svelte'
   import ViewSwitch from './ViewSwitch.svelte'
   import { CALCS, calcTitle, type CalcType } from './calcs'
+  import AngleInt from './calcs/AngleInt.svelte'
   import Area from './calcs/Area.svelte'
   import Azimuth from './calcs/Azimuth.svelte'
   import DistInt from './calcs/DistInt.svelte'
@@ -47,6 +48,7 @@
     tachy: Tachy,
     stakeout: Stakeout,
     resection: Resection,
+    angleInt: AngleInt,
   }
 
   const session = $derived(ui.active?.kind === 'calc' ? findCalc(ui.active.id) : undefined)

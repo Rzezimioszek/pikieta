@@ -14,6 +14,7 @@ export type CalcType =
   | 'tachy'
   | 'stakeout'
   | 'resection'
+  | 'angleInt'
 
 export interface AzimuthData {
   rows: { from: string; to: string }[]
@@ -50,6 +51,14 @@ export interface LineIntData {
 }
 export interface AreaData {
   rows: { id: string }[]
+}
+export interface AngleIntData {
+  a: string
+  b: string
+  alpha: string
+  beta: string
+  side: 'left' | 'right'
+  id: string
 }
 export interface ResectionData {
   id: string
@@ -162,6 +171,15 @@ export const CALCS: Record<CalcType, CalcInfo> = {
         ? `Przecięcie ${d.a.trim()}–${d.b.trim()} × ${d.c.trim()}–${d.d.trim()}`
         : 'Przecięcie prostych',
   },
+  angleInt: {
+    label: 'Wcięcie kątowe w przód',
+    short: 'Kątowe',
+    icon: 'angleInt',
+    hint: 'Punkt z kątów pomierzonych na dwóch punktach znanych (kąty wewnętrzne trójkąta).',
+    init: (): AngleIntData => ({ a: '', b: '', alpha: '', beta: '', side: 'left', id: '' }),
+    title: (d: AngleIntData) =>
+      filled(d.a, d.b) ? `Wcięcie kątowe ${d.a.trim()}, ${d.b.trim()}` : 'Wcięcie kątowe w przód',
+  },
   resection: {
     label: 'Wcięcie wstecz',
     short: 'Wstecz',
@@ -236,7 +254,7 @@ export const CALC_GROUPS: { label: string; types: CalcType[] }[] = [
   { label: 'Osnowa', types: ['traverse'] },
   { label: 'Pomiary', types: ['tachy', 'stakeout'] },
   { label: 'Domiary', types: ['offset', 'fromOffset'] },
-  { label: 'Wcięcia', types: ['distInt', 'lineInt', 'resection'] },
+  { label: 'Wcięcia', types: ['distInt', 'angleInt', 'lineInt', 'resection'] },
   { label: 'Pola', types: ['area'] },
 ]
 

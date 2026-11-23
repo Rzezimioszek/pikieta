@@ -199,7 +199,9 @@ Zrobione (22.11.2026):
 
 - wcięcie wstecz (24.11.2026): z trzech kierunków rozwiązanie ścisłe jako drugie przecięcie dwóch okręgów (działa wewnątrz i na zewnątrz trójkąta, bez punktu startowego), z czterech i więcej wyrównanie metodą najmniejszych kwadratów (X, Y, stała orientacji) z odchyłkami, m₀ i mx, my; ostrzeżenie przy stanowisku blisko okręgu niebezpiecznego; zadanie w grupie Wcięcia, raport.
 
-Następne w etapie 4a: wcięcie kątowe w przód z kątów pomierzonych, wcięcie kombinowane i z wyrównaniem, konstrukcje (prostopadła, równoległa, przecięcie prostej z okręgiem), transformacje płaskie; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
+- wcięcie kątowe w przód z kątów pomierzonych (24.11.2026): kąty wewnętrzne α, β przy punktach znanych, wybór strony prostej A→B, kąt γ przy punkcie i długości boków, ostrzeżenie przy słabo wyznaczonym wcięciu; test zgodności ze wzorem z kotangensami.
+
+Następne w etapie 4a: wcięcie kombinowane i z wyrównaniem, konstrukcje (prostopadła, równoległa, przecięcie prostej z okręgiem), transformacje płaskie; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
 
 ## Usługi mapowe
 

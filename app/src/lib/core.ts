@@ -75,6 +75,11 @@ export function lineIntersection(a: XY, b: XY, c: XY, d: XY): XY | null {
   return xy(w.line_intersection(flat([a, b, c, d])))
 }
 
+/** Wcięcie kątowe w przód z kątów wewnętrznych α (przy A) i β (przy B) [g]. */
+export function angleIntersection(a: XY, b: XY, alpha: number, beta: number, left: boolean): XY | null {
+  return xy(w.angle_intersection(flat([a, b]), alpha, beta, left))
+}
+
 export function distanceIntersection(a: XY, ra: number, b: XY, rb: number): { left: XY; right: XY } | null {
   const r = w.distance_intersection(a.x, a.y, ra, b.x, b.y, rb)
   return r ? { left: xy(r, 0)!, right: xy(r, 2)! } : null

@@ -503,3 +503,24 @@ pub fn resection(obs: &[f64]) -> Result<Vec<f64>, JsError> {
     out.extend(r.residuals.iter().map(|v| cc(*v)));
     Ok(out)
 }
+
+/// Wcięcie kątowe w przód: punkty A, B (`[xa, ya, xb, yb]`), kąty α i β [g], strona względem A→B.
+/// Zwraca `[x, y]` albo `undefined`, gdy kąty nie wyznaczają punktu.
+#[wasm_bindgen]
+pub fn angle_intersection(
+    coords: &[f64],
+    alpha_grad: f64,
+    beta_grad: f64,
+    left: bool,
+) -> Option<Vec<f64>> {
+    let p = points_from_flat(coords);
+    let [a, b] = p.as_slice() else { return None };
+    pikieta_calc::angle_intersection(
+        *a,
+        *b,
+        grad_to_rad(alpha_grad),
+        grad_to_rad(beta_grad),
+        left,
+    )
+    .map(|q| vec![q.x, q.y])
+}
