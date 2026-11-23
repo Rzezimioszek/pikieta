@@ -201,7 +201,9 @@ Zrobione (22.11.2026):
 
 - wcięcie kątowe w przód z kątów pomierzonych (24.11.2026): kąty wewnętrzne α, β przy punktach znanych, wybór strony prostej A→B, kąt γ przy punkcie i długości boków, ostrzeżenie przy słabo wyznaczonym wcięciu; test zgodności ze wzorem z kotangensami.
 
-Następne w etapie 4a: wcięcie kombinowane i z wyrównaniem, konstrukcje (prostopadła, równoległa, przecięcie prostej z okręgiem), transformacje płaskie; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
+- wcięcie z wyrównaniem (24.11.2026): dowolny zestaw kątów (na punkcie znanym od nawiązania do punktu) i długości z punktów znanych, czyli wcięcia kątowe, liniowe, kombinowane i biegunowe; wyrównanie MNK z wagami z błędów średnich kąta i długości, poprawki w cc i mm, m₀, mx, my; punkt startowy z przecięć par obserwacji; bez obserwacji nadliczbowych lista rozwiązań ścisłych do wyboru.
+
+Następne w etapie 4a: konstrukcje (prostopadła, równoległa, przecięcie prostej z okręgiem), transformacje płaskie; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
 
 ## Usługi mapowe
 

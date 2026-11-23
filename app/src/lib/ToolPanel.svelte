@@ -9,6 +9,7 @@
   import ViewSwitch from './ViewSwitch.svelte'
   import { CALCS, calcTitle, type CalcType } from './calcs'
   import AngleInt from './calcs/AngleInt.svelte'
+  import CombinedInt from './calcs/CombinedInt.svelte'
   import Area from './calcs/Area.svelte'
   import Azimuth from './calcs/Azimuth.svelte'
   import DistInt from './calcs/DistInt.svelte'
@@ -49,6 +50,7 @@
     stakeout: Stakeout,
     resection: Resection,
     angleInt: AngleInt,
+    combinedInt: CombinedInt,
   }
 
   const session = $derived(ui.active?.kind === 'calc' ? findCalc(ui.active.id) : undefined)

@@ -5,7 +5,9 @@
 use pikieta_core::Point2;
 use std::f64::consts::TAU;
 
+mod intersection;
 mod resection;
+pub use intersection::{intersection, IntersectionResult, Observation};
 mod stakeout;
 pub use resection::{resection, ResectionResult};
 mod tachymetry;

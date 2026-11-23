@@ -80,6 +80,24 @@ export function angleIntersection(a: XY, b: XY, alpha: number, beta: number, lef
   return xy(w.angle_intersection(flat([a, b]), alpha, beta, left))
 }
 
+export type IntObs = { kind: 'dist'; from: XY; d: number } | { kind: 'angle'; at: XY; ref: XY; angle: number }
+
+/** Wcięcie z wyrównaniem z kątów [g] i długości [m]; poprawki w cc (kąty) i mm (długości). */
+export function intersectionLsq(obs: IntObs[], sigmaCc: number, sigmaMm: number, pick: number) {
+  const flatObs = obs.flatMap((o) =>
+    o.kind === 'dist' ? [0, o.from.x, o.from.y, 0, 0, o.d] : [1, o.at.x, o.at.y, o.ref.x, o.ref.y, o.angle],
+  )
+  const r = JSON.parse(w.intersection_lsq(new Float64Array(flatObs), sigmaCc, sigmaMm, pick))
+  return {
+    p: { x: r.x, y: r.y } as XY,
+    residuals: r.residuals as number[],
+    m0: r.m0 as number | null,
+    mx: r.mx as number,
+    my: r.my as number,
+    solutions: (r.solutions as [number, number][]).map(([x, y]) => ({ x, y })),
+  }
+}
+
 export function distanceIntersection(a: XY, ra: number, b: XY, rb: number): { left: XY; right: XY } | null {
   const r = w.distance_intersection(a.x, a.y, ra, b.x, b.y, rb)
   return r ? { left: xy(r, 0)!, right: xy(r, 2)! } : null

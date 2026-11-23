@@ -524,3 +524,62 @@ pub fn angle_intersection(
     )
     .map(|q| vec![q.x, q.y])
 }
+
+/// Wcięcie z wyrównaniem. `obs` to szóstki `[rodzaj, x1, y1, x2, y2, wartość]`: rodzaj 0 to długość
+/// od punktu 1 [m] (punkt 2 pomijany), 1 to kąt [g] na punkcie 1 od kierunku na punkt 2.
+/// Błędy średnie: kąta [cc], długości [mm]. Zwraca JSON z punktem, poprawkami (cc albo mm),
+/// m₀, mx, my i listą rozwiązań ścisłych.
+#[wasm_bindgen]
+pub fn intersection_lsq(
+    obs: &[f64],
+    sigma_cc: f64,
+    sigma_mm: f64,
+    pick: usize,
+) -> Result<String, JsError> {
+    use pikieta_calc::Observation;
+    let list: Vec<Observation> = obs
+        .as_chunks::<6>()
+        .0
+        .iter()
+        .map(|o| {
+            let (p1, p2) = (Point2::new(o[1], o[2]), Point2::new(o[3], o[4]));
+            if o[0] == 0.0 {
+                Observation::Distance {
+                    from: p1,
+                    distance: o[5],
+                }
+            } else {
+                Observation::Angle {
+                    at: p1,
+                    reference: p2,
+                    angle: grad_to_rad(o[5]),
+                }
+            }
+        })
+        .collect();
+    let r = pikieta_calc::intersection(
+        &list,
+        grad_to_rad(sigma_cc / 10_000.0),
+        sigma_mm / 1000.0,
+        pick,
+    )
+    .map_err(|e| JsError::new(&e))?;
+    let res: Vec<f64> = list
+        .iter()
+        .zip(&r.residuals)
+        .map(|(o, v)| match o {
+            Observation::Distance { .. } => v * 1000.0,
+            Observation::Angle { .. } => rad_to_grad(*v) * 10_000.0,
+        })
+        .collect();
+    Ok(serde_json::json!({
+        "x": r.point.x,
+        "y": r.point.y,
+        "residuals": res,
+        "m0": r.m0,
+        "mx": r.mxy.0,
+        "my": r.mxy.1,
+        "solutions": r.solutions.iter().map(|p| [p.x, p.y]).collect::<Vec<_>>(),
+    })
+    .to_string())
+}

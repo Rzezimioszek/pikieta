@@ -15,6 +15,7 @@ export type CalcType =
   | 'stakeout'
   | 'resection'
   | 'angleInt'
+  | 'combinedInt'
 
 export interface AzimuthData {
   rows: { from: string; to: string }[]
@@ -51,6 +52,15 @@ export interface LineIntData {
 }
 export interface AreaData {
   rows: { id: string }[]
+}
+export interface CombinedIntData {
+  id: string
+  /** Błąd średni kąta [cc] i długości [mm]: wagi w wyrównaniu. */
+  sigmaAngle: string
+  sigmaDist: string
+  /** Numer rozwiązania, gdy bez obserwacji nadliczbowych jest ich kilka. */
+  pick: number
+  rows: { at: string; ref: string; angle: string; dist: string }[]
 }
 export interface AngleIntData {
   a: string
@@ -171,6 +181,23 @@ export const CALCS: Record<CalcType, CalcInfo> = {
         ? `Przecięcie ${d.a.trim()}–${d.b.trim()} × ${d.c.trim()}–${d.d.trim()}`
         : 'Przecięcie prostych',
   },
+  combinedInt: {
+    label: 'Wcięcie z wyrównaniem',
+    short: 'Kombinowane',
+    icon: 'combinedInt',
+    hint: 'Punkt z dowolnych kątów i długości do punktów znanych, z wyrównaniem przy obserwacjach nadliczbowych.',
+    init: (): CombinedIntData => ({
+      id: '',
+      sigmaAngle: '10',
+      sigmaDist: '5',
+      pick: 0,
+      rows: [{ at: '', ref: '', angle: '', dist: '' }],
+    }),
+    title: (d: CombinedIntData) => {
+      const ids = [...new Set(d.rows.map((r) => r.at.trim()).filter(Boolean))]
+      return ids.length ? `Wcięcie z ${ids.slice(0, 3).join(', ')}` : 'Wcięcie z wyrównaniem'
+    },
+  },
   angleInt: {
     label: 'Wcięcie kątowe w przód',
     short: 'Kątowe',
@@ -254,7 +281,7 @@ export const CALC_GROUPS: { label: string; types: CalcType[] }[] = [
   { label: 'Osnowa', types: ['traverse'] },
   { label: 'Pomiary', types: ['tachy', 'stakeout'] },
   { label: 'Domiary', types: ['offset', 'fromOffset'] },
-  { label: 'Wcięcia', types: ['distInt', 'angleInt', 'lineInt', 'resection'] },
+  { label: 'Wcięcia', types: ['distInt', 'angleInt', 'combinedInt', 'lineInt', 'resection'] },
   { label: 'Pola', types: ['area'] },
 ]
 
