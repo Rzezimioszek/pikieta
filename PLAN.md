@@ -170,6 +170,14 @@ Test na prawdziwych plikach (22.11.2026; pliki lokalnie w `test_gml/`, poza repo
 - obrót tekstów: radiany przeciwnie do ruchu wskazówek zegara od osi wschodniej, sprawdzone na danych (97% numerów adresowych równoległych do krawędzi budynku z dokładnością 5°); justyfikacja przyjęta jak na klawiaturze numerycznej (7 lewy górny, 3 prawy dolny), do potwierdzenia w dokumentacji;
 - narzędzia: `tools/anonimizuj_gml.py` (dane osobowe na zastępniki, reszta pliku bez zmian) i `cargo run --release -p pikieta-gml --example gml_check -- plik.gml` (czasy, zapis bajt w bajt, klasy, kody znaków, teksty, uwagi walidacji).
 
+Planowanie przestrzenne (23.11.2026), przykłady GML APP 1.0 i 2.0 w `isap/` (plan miejscowy, studium, plan województwa, plan ogólny gminy):
+
+- odczyt wszystkich przykładów bez błędów i zapis bajt w bajt (test `isap_samples`); obiekty w `wfs:member`, układ z `http://www.opengis.net/def/crs/EPSG/0/…`;
+- kody `APP-AKT` (zasięg aktu) i `APP-<symbol>` (strefy SW…SK, obszary OZS, OUZ, OSD), etykiety: tytuł aktu i oznaczenie wydzielenia (np. „1SJ”);
+- style: kolory wypełnienia stref planu ogólnego i obrys 83,83,83 z legendy usługi WMS Rejestru Urbanistycznego; obszary OZS/OUZ/OSD jako obrys (w legendzie szrafy); zasięg aktu grubą czarną linią (wybór własny);
+- kontrola samoprzecięć pierścieni na siatce zamiast O(n²): granica województwa (24 tys. wierzchołków) 0,94 s → 0,01 s;
+- przykłady planu miejscowego, studium i planu województwa mają tylko zasięg i odnośnik do rysunku rastrowego; rysunku (GeoTIFF z georeferencją) jeszcze nie wczytujemy.
+
 Do zamknięcia etapu:
 
 - potwierdzić znaczenie justyfikacji 1–9 i reguły „kontroli typu geometrii” z pliku testowego BDOT500 (obiekty z `gml:ArcString` oznaczone jako błędne, te same punkty w `LineStringSegment` jako poprawne);

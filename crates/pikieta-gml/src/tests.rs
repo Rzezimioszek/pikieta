@@ -361,3 +361,81 @@ fn carto_texts_from_graphic_presentation() {
     assert_eq!(json[0]["x"], 5.0);
     assert_eq!(json[0]["s"], "12/1");
 }
+
+#[test]
+fn self_intersection_grid_matches_brute_force() {
+    fn brute(ring: &[[f64; 2]]) -> bool {
+        let n = ring.len() - 1;
+        let cross = |o: [f64; 2], a: [f64; 2], b: [f64; 2]| {
+            (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+        };
+        (0..n).any(|i| {
+            (i + 2..n).filter(|&j| !(i == 0 && j == n - 1)).any(|j| {
+                let (p1, p2, q1, q2) = (ring[i], ring[i + 1], ring[j], ring[j + 1]);
+                cross(q1, q2, p1) * cross(q1, q2, p2) < 0.0
+                    && cross(p1, p2, q1) * cross(p1, p2, q2) < 0.0
+            })
+        })
+    }
+    // Generator liczb pseudolosowych (powtarzalny).
+    let mut seed = 12345u64;
+    let mut rnd = || {
+        seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (seed >> 11) as f64 / (1u64 << 53) as f64
+    };
+    for case in 0..40 {
+        let n = 70 + case * 7;
+        let ring: Vec<[f64; 2]> = if case % 2 == 0 {
+            // Gwiazda wokół środka: kąty rosnące, promień losowy — bez samoprzecięć.
+            (0..n)
+                .map(|i| {
+                    let t = std::f64::consts::TAU * i as f64 / n as f64;
+                    let r = 50.0 + 40.0 * rnd();
+                    [5_000_000.0 + r * t.cos(), 7_500_000.0 + r * t.sin()]
+                })
+                .collect()
+        } else {
+            (0..n).map(|_| [100.0 * rnd(), 100.0 * rnd()]).collect()
+        };
+        let mut closed = ring.clone();
+        closed.push(ring[0]);
+        assert_eq!(self_intersects(&closed), brute(&closed), "przypadek {case}");
+    }
+}
+
+#[test]
+fn spatial_planning_codes_and_labels() {
+    let xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<wfs:FeatureCollection xmlns:app="https://www.gov.pl/static/zagospodarowanieprzestrzenne/schemas/app/2.0"
+  xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:wfs="http://www.opengis.net/wfs/2.0" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <wfs:member>
+    <app:AktPlanowaniaPrzestrzennego gml:id="A1">
+      <app:tytul>Plan ogólny gminy ABC</app:tytul>
+      <app:zasiegPrzestrzenny><gml:MultiSurface srsName="http://www.opengis.net/def/crs/EPSG/0/2176"><gml:surfaceMember><gml:Polygon>
+        <gml:exterior><gml:LinearRing><gml:posList>0 0 0 10 10 10 0 0</gml:posList></gml:LinearRing></gml:exterior>
+      </gml:Polygon></gml:surfaceMember></gml:MultiSurface></app:zasiegPrzestrzenny>
+    </app:AktPlanowaniaPrzestrzennego>
+  </wfs:member>
+  <wfs:member>
+    <app:StrefaPlanistyczna gml:id="S1">
+      <app:oznaczenie>1SJ</app:oznaczenie>
+      <app:symbol>SJ</app:symbol>
+      <app:geometria><gml:Polygon srsName="http://www.opengis.net/def/crs/EPSG/0/2176">
+        <gml:exterior><gml:LinearRing><gml:posList>0 0 0 5 5 5 0 0</gml:posList></gml:LinearRing></gml:exterior>
+      </gml:Polygon></app:geometria>
+      <app:plan xlink:href="https://example/AktPlanowaniaPrzestrzennego/A1"/>
+    </app:StrefaPlanistyczna>
+  </wfs:member>
+</wfs:FeatureCollection>"#;
+    let d = GmlDocument::parse(xml).unwrap();
+    let a = find(&d, "A1");
+    assert_eq!(
+        (a.code.as_str(), a.label.as_str()),
+        ("APP-AKT", "Plan ogólny gminy ABC")
+    );
+    let s = find(&d, "S1");
+    assert_eq!((s.code.as_str(), s.label.as_str()), ("APP-SJ", "1SJ"));
+    assert_eq!(d.epsg(), Some(2176));
+}

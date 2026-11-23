@@ -114,6 +114,8 @@ const LABEL_KEYS: &[&str] = &[
     "idUzytku",
     "idKonturu",
     "numer",
+    // Planowanie przestrzenne (APP): oznaczenie wydzielenia, np. „1SJ”.
+    "oznaczenie",
     "nazwa",
     "name",
 ];
@@ -711,6 +713,7 @@ fn describe(class: &str, el: &Element) -> Described {
         // Pikiety BDOT500 opisane wysokością.
         "OT_Rzedna" => t("rzedna"),
         "EGB_KonturUzytkuGruntowego" => t("OFU"),
+        "AktPlanowaniaPrzestrzennego" => t("tytul"),
         "EGB_AdresNieruchomosci" => t("numerPorzadkowy"),
         // Rzędne GESUT opisane wysokością (rzędna albo rzędna góry lub dołu).
         "GES_Rzedna" => ["rzedna", "rzednaGory", "rzednaDolu"]
@@ -737,10 +740,18 @@ fn describe(class: &str, el: &Element) -> Described {
         }
         _ => id_label(),
     };
+    // Planowanie przestrzenne (APP): zasięg aktu i wydzielenia z symbolem (strefy, obszary).
+    let code = if class == "AktPlanowaniaPrzestrzennego" {
+        "APP-AKT".to_string()
+    } else if el.child("plan").is_some() && !t("symbol").is_empty() {
+        format!("APP-{}", t("symbol"))
+    } else {
+        symbol_code(class, &t)
+    };
     Described {
         label,
         variant,
-        code: symbol_code(class, &t),
+        code,
     }
 }
 
@@ -854,22 +865,54 @@ fn short_label(key: &str, value: &str) -> String {
     }
 }
 
-/// Czy pierścień (zamknięty) ma przecinające się boki.
+/// Czy pierścień (zamknięty) ma przecinające się boki (przecięcie właściwe, bez boków sąsiednich).
+///
+/// Boki trafiają do siatki ok. √n × √n komórek i sprawdzamy tylko pary z tej samej komórki,
+/// więc granica gminy czy województwa z dziesiątkami tysięcy wierzchołków nie jest liczona w O(n²).
 pub fn self_intersects(ring: &[P]) -> bool {
     let n = ring.len().saturating_sub(1);
     if n < 4 {
         return false;
     }
     let cross = |o: P, a: P, b: P| (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-    let hit = |p1: P, p2: P, q1: P, q2: P| {
+    let hit = |i: usize, j: usize| {
+        let (i, j) = (i.min(j), i.max(j));
+        if j < i + 2 || (i == 0 && j == n - 1) {
+            return false;
+        }
+        let (p1, p2, q1, q2) = (ring[i], ring[i + 1], ring[j], ring[j + 1]);
         let (d1, d2) = (cross(q1, q2, p1), cross(q1, q2, p2));
         let (d3, d4) = (cross(p1, p2, q1), cross(p1, p2, q2));
         d1 * d2 < 0.0 && d3 * d4 < 0.0
     };
-    (0..n).any(|i| {
-        (i + 2..n)
-            .filter(|&j| !(i == 0 && j == n - 1))
-            .any(|j| hit(ring[i], ring[i + 1], ring[j], ring[j + 1]))
+    if n <= 64 {
+        return (0..n).any(|i| (i + 2..n).any(|j| hit(i, j)));
+    }
+    let (mut lo, mut hi) = ([f64::INFINITY; 2], [f64::NEG_INFINITY; 2]);
+    for p in &ring[..n] {
+        for k in 0..2 {
+            lo[k] = lo[k].min(p[k]);
+            hi[k] = hi[k].max(p[k]);
+        }
+    }
+    let k = (n as f64).sqrt().ceil() as usize;
+    let size = [0, 1].map(|a| ((hi[a] - lo[a]) / k as f64).max(f64::MIN_POSITIVE));
+    let cell = |v: f64, a: usize| (((v - lo[a]) / size[a]) as usize).min(k - 1);
+    let mut grid: Vec<Vec<usize>> = vec![Vec::new(); k * k];
+    for i in 0..n {
+        let (a, b) = (ring[i], ring[i + 1]);
+        let (x0, x1) = (cell(a[0].min(b[0]), 0), cell(a[0].max(b[0]), 0));
+        let (y0, y1) = (cell(a[1].min(b[1]), 1), cell(a[1].max(b[1]), 1));
+        for cx in x0..=x1 {
+            for cy in y0..=y1 {
+                grid[cx * k + cy].push(i);
+            }
+        }
+    }
+    grid.iter().any(|segs| {
+        segs.iter()
+            .enumerate()
+            .any(|(a, &i)| segs[a + 1..].iter().any(|&j| hit(i, j)))
     })
 }
 

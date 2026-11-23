@@ -306,8 +306,60 @@ export function textStyle(s: ClassStyle | undefined): ClassStyle {
 }
 
 /** Styl obiektu: klasa, kod znaku umownego z rdzenia i wariant (bity `VARIANT_*`). */
+// --- Planowanie przestrzenne (APP) ---
+// Kolory wypełnienia stref planistycznych planu ogólnego gminy i obrys 83,83,83 z legendy usługi WMS
+// Rejestru Urbanistycznego (GetLegendGraphic warstw APP.POG.<symbol>, odczyt 23.11.2026).
+const POG_ZONES: Record<string, [number, number, number]> = {
+  SW: [204, 189, 177],
+  SJ: [236, 217, 185],
+  SZ: [255, 242, 213],
+  SU: [255, 181, 180],
+  SH: [255, 193, 219],
+  SP: [215, 195, 238],
+  SR: [254, 247, 177],
+  SI: [229, 229, 229],
+  SN: [221, 250, 197],
+  SC: [201, 233, 225],
+  SG: [253, 233, 255],
+  SO: [241, 255, 227],
+  SK: [248, 248, 248],
+}
+const APP_GREY = rgb(83, 83, 83)
+const APP_LABEL: LabelStyle = { color: BLACK, maxRes: 5, font: 'bold 12px sans-serif' }
+/** Obszary nakładające się na strefy: w legendzie szrafy, tu obrys o różnym przerywaniu. */
+const POG_AREAS: Record<string, number[] | undefined> = { OZS: undefined, OUZ: [8, 4], OSD: [2, 3] }
+
+function appStyle(symbol: string): ClassStyle | null {
+  // Zasięg aktu planowania (plan ogólny, miejscowy, studium, plan województwa): gruba czarna linia bez wypełnienia,
+  // żeby nie zasłaniać stref; legenda usługi nie podaje koloru granicy (wybór własny).
+  if (symbol === 'AKT') return { order: 80, maxRes: 500, line: { color: BLACK, width: 2.5, halo: 1 } }
+  const z = POG_ZONES[symbol]
+  if (z) {
+    return {
+      order: 60,
+      maxRes: 100,
+      fill: rgb(z[0], z[1], z[2], 0.8),
+      line: { color: APP_GREY, width: 1 },
+      label: APP_LABEL,
+    }
+  }
+  if (symbol in POG_AREAS) {
+    return {
+      order: 70,
+      maxRes: 100,
+      line: { color: APP_GREY, width: 2, dash: POG_AREAS[symbol], halo: 0.5 },
+      label: APP_LABEL,
+    }
+  }
+  return null
+}
+
 export function styleOf(cls: string, code = '', variant = 0): ClassStyle {
   if (cls in SPECIAL) return SPECIAL[cls]
+  if (code.startsWith('APP-')) {
+    const s = appStyle(code.slice(4))
+    if (s) return s
+  }
   const c = code || fallbackCode(cls)
   return c ? fromCatalog(c, variant) : DEFAULT
 }
