@@ -240,7 +240,13 @@ Zrobione:
   - pełna lista pominiętych wierszy;
   - wybrana kolejność zapamiętana dla eksportu.
 
-Następne według briefu: jedna historia i słownik pojęć, pasek startowy w pustym projekcie, rozdzielona zmiana układu, „Zapisz wynik”, wklejanie obserwacji w tachimetrii, rysunek w raporcie, panel warstw.
+- zmiana układu projektu z punktami (27.11.2026):
+  - okno z dwiema akcjami: „Przelicz punkty do nowego układu” (punkty zostają w tym samym miejscu w terenie) albo „Zmień układ bez przeliczania” (dla punktów wczytanych w złym układzie);
+  - zalecana akcja wynika z tego, czy punkty leżą w Polsce w obecnym układzie, czy dopiero po samej zmianie oznaczenia;
+  - lista układów wraca do obecnego, dopóki nie zapadnie decyzja;
+  - komunikat po zmianie.
+
+Następne według briefu: jedna historia i słownik pojęć, pasek startowy w pustym projekcie, „Zapisz wynik”, wklejanie obserwacji w tachimetrii, rysunek w raporcie, panel warstw.
 
 ## Eksport wyników (wątek na później)
 

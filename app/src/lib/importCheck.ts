@@ -4,7 +4,7 @@
 import { toGeodetic, type Pt, type XY } from './core'
 
 /** Polska z zapasem około 30 km. */
-const inPoland = (g: { lat: number; lon: number } | null) =>
+export const inPoland = (g: { lat: number; lon: number } | null) =>
   !!g && g.lat >= 48.8 && g.lat <= 55.1 && g.lon >= 13.8 && g.lon <= 24.4
 
 /** Strefy układu 2000: EPSG → numer strefy (cyfra milionów w Y). */

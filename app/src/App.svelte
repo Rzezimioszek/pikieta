@@ -28,6 +28,7 @@
     addPoints,
     env,
     nextId,
+    notify,
     openTaskPicker,
     picker,
     project,
@@ -52,11 +53,14 @@
   /** Panel narzędzia: zawsze w podziale i pełnym ekranie, w trybie mapy tylko z otwartym dokumentem. */
   const toolVisible = $derived(ui.view !== 'map' || ui.active !== null)
 
-  /** Po zmianie układu przelicza wszystkie punkty, żeby zostały w tym samym miejscu w terenie. */
-  function changeCrs(code: string) {
+  /** Zmiana układu projektu: z przeliczeniem punktów (zostają w tym samym miejscu w terenie) albo bez
+   *  (liczby bez zmian, np. gdy punkty wczytano w złym układzie). */
+  function changeCrs(code: string, reproject: boolean) {
     const [from, to] = [epsg, epsgOf(code)]
-    if (coreVersion) project.points = project.points.map((p) => ({ ...p, ...(transformXY(from, to, p) ?? p) }))
+    const n = project.points.length
+    if (reproject && coreVersion) project.points = project.points.map((p) => ({ ...p, ...(transformXY(from, to, p) ?? p) }))
     project.crs = code
+    if (n) notify(reproject ? `Przeliczono ${n} pkt do układu ${crsLabel}.` : `Zmieniono układ na ${crsLabel} bez przeliczania ${n} pkt.`)
   }
 
   function zoomTo(points: XY[]) {

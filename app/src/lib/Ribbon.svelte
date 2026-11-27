@@ -14,6 +14,7 @@
   import { exportPointsGml, gml, importGml, replaceLayers } from './gml.svelte'
   import type { IconName } from './icons'
   import { BASEMAPS, CRS_LIST } from './map'
+  import CrsChange from './CrsChange.svelte'
   import ServicesMenu from './ServicesMenu.svelte'
   import { grouped } from './services'
   import {
@@ -34,11 +35,22 @@
   interface Props {
     crsLabel: string
     onzoom: (points: XY[]) => void
-    onchangecrs: (code: string) => void
+    /** `reproject`: przeliczyć punkty, żeby zostały w tym samym miejscu, albo zostawić liczby. */
+    onchangecrs: (code: string, reproject: boolean) => void
   }
   let { crsLabel, onzoom, onchangecrs }: Props = $props()
 
   const recent = $derived(recentTypes(4))
+
+  /** Układ wybrany na liście, czekający na decyzję, co zrobić z punktami. */
+  let pendingCrs = $state<string | null>(null)
+  function pickCrs(e: Event & { currentTarget: HTMLSelectElement }) {
+    const code = e.currentTarget.value
+    if (!project.points.length) return onchangecrs(code, true)
+    // Lista wraca do obecnego układu, dopóki użytkownik nie wybierze, co zrobić z punktami.
+    e.currentTarget.value = project.crs
+    pendingCrs = code
+  }
 
   const TABS: [RibbonTab, string][] = [
     ['project', 'Projekt'],
@@ -243,7 +255,7 @@
           <div class="btns">
             <label class="stack wide">
               <span>Układ współrzędnych</span>
-              <select value={project.crs} onchange={(e) => onchangecrs(e.currentTarget.value)}>
+              <select value={project.crs} onchange={pickCrs}>
                 {#each CRS_LIST as c (c.code)}<option value={c.code}>{c.label}</option>{/each}
               </select>
             </label>
@@ -306,6 +318,16 @@
     </div>
   {/if}
 </header>
+
+<CrsChange
+  target={pendingCrs}
+  onchoose={(reproject) => {
+    const code = pendingCrs!
+    pendingCrs = null
+    onchangecrs(code, reproject)
+  }}
+  oncancel={() => (pendingCrs = null)}
+/>
 
 <style>
   .ribbon {
