@@ -98,7 +98,10 @@
   }
 </script>
 
-<section class="tool surface">
+<section class="tool surface" aria-labelledby="tool-heading">
+  <h2 id="tool-heading" class="sr-only">
+    {session ? calcTitle(session) : ui.active?.kind === 'report' ? 'Raport obliczeń' : gmlLayer ? gmlLayer.name : 'Obliczenia'}
+  </h2>
   <header>
     {#if session}
       <span class="ic"><Icon name={CALCS[session.type].icon} size={20} /></span>

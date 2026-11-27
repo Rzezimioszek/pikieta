@@ -110,7 +110,7 @@
   </li>
 {/snippet}
 
-<aside class="sidebar surface">
+<aside class="sidebar surface" aria-label="Lista obliczeń i warstw">
   <div class="new">
     <button class="primary" onclick={() => (menu = !menu)} aria-expanded={menu}>
       <Icon name="plus" /> Nowe obliczenie
@@ -134,15 +134,15 @@
     <input placeholder="Szukaj obliczeń" aria-label="Szukaj obliczeń" bind:value={query} />
   </label>
 
-  <nav>
+  <nav aria-label="Obliczenia">
     {#if open.length}
-      <h3>Otwarte</h3>
+      <h2>Otwarte</h2>
       <ul>
         {#each open as s (s.id)}{@render item(s)}{/each}
       </ul>
     {/if}
     {#each history as [label, list] (label)}
-      <h3>{label}</h3>
+      <h2>{label}</h2>
       <ul>
         {#each list as s (s.id)}{@render item(s)}{/each}
       </ul>
@@ -156,7 +156,7 @@
 
   <footer>
     {#if gml.layers.length}
-      <h3>Warstwy GML</h3>
+      <h2>Warstwy GML</h2>
       <ul class="layers">
         {#each gml.layers as l (l.id)}
           <li class="row" class:active={ui.active?.kind === 'gml' && ui.active.id === l.id}>
@@ -259,7 +259,7 @@
     padding: 0 6px;
     scrollbar-width: thin;
   }
-  h3 {
+  h2 {
     margin: 10px 4px 4px;
     font-size: 0.7rem;
     font-weight: 650;
@@ -392,7 +392,7 @@
   .vis {
     margin-right: 10px;
   }
-  footer h3 {
+  footer h2 {
     margin-top: 0;
   }
   .ver {

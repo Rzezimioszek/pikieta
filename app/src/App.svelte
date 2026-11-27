@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte'
+  import { rovingKeys } from './lib/a11y'
   import CalcList from './lib/CalcList.svelte'
   import Icon from './lib/Icon.svelte'
   import GmlTable from './lib/GmlTable.svelte'
@@ -146,6 +147,19 @@
   $effect(() => handle?.setGmlSelection([...gmlSelection]))
   gmlHooks.label = (layer, i, label) => handle?.setGmlLabel(layer, i, label)
 
+  const tableMax = () => Math.round(window.innerHeight * 0.7)
+  /** Wysokość tabeli z klawiatury: strzałki co 24 px, PageUp/PageDown co 120 px, Home/End skrajne. */
+  function resizeTableByKey(e: KeyboardEvent) {
+    const step = { ArrowUp: 24, ArrowDown: -24, PageUp: 120, PageDown: -120 }[e.key]
+    let h = ui.tableHeight
+    if (step !== undefined) h += step
+    else if (e.key === 'Home') h = 120
+    else if (e.key === 'End') h = tableMax()
+    else return
+    e.preventDefault()
+    ui.tableHeight = Math.min(tableMax(), Math.max(120, h))
+  }
+
   function startTableResize(e: PointerEvent) {
     const [y0, h0] = [e.clientY, ui.tableHeight]
     const move = (ev: PointerEvent) => {
@@ -220,6 +234,8 @@
   {#each project.points.slice(0, 2000) as p (p.id)}<option value={p.id}></option>{/each}
 </datalist>
 
+<a class="skip-link" href="#workspace">Przejdź do obszaru roboczego</a>
+
 <div class="app">
   <Ribbon {crsLabel} onzoom={zoomTo} onchangecrs={changeCrs} />
 
@@ -229,19 +245,32 @@
       <CalcList {coreVersion} />
     {/if}
 
-    <div class="workspace" class:with-table={ui.table} style:--table-h={`${ui.tableHeight}px`}>
+    <main
+      id="workspace"
+      tabindex="-1"
+      class="workspace"
+      class:with-table={ui.table}
+      style:--table-h={`${ui.tableHeight}px`}
+    >
       <div class="top view-{ui.view}" class:has-tool={toolVisible}>
         <div class="mapcard surface">
-          <div class="map" class:picking={picker.fill !== null || ui.addByClick} bind:this={mapEl}></div>
+          <div
+            class="map"
+            class:picking={picker.fill !== null || ui.addByClick}
+            role="application"
+            aria-label="Mapa. Strzałki przesuwają widok, plus i minus zmieniają skalę. Punkty są też w tabeli punktów."
+            tabindex="0"
+            bind:this={mapEl}
+          ></div>
 
           {#if !toolVisible}<div class="corner"><ViewSwitch /></div>{/if}
 
           {#if picker.fill}
-            <div class="pill hintpill">
+            <div class="pill hintpill" role="status">
               Kliknij punkt na mapie: <strong>{picker.label}</strong> <kbd>Esc</kbd>
             </div>
           {:else if ui.addByClick}
-            <div class="pill hintpill">Kliknij na mapie, żeby dodać punkt {nextId()} <kbd>Esc</kbd></div>
+            <div class="pill hintpill" role="status">Kliknij na mapie, żeby dodać punkt {nextId()} <kbd>Esc</kbd></div>
           {/if}
 
           {#if cursor}
@@ -270,15 +299,26 @@
       </div>
 
       {#if ui.table}
-        <div class="splitter" role="separator" aria-orientation="horizontal" onpointerdown={startTableResize}></div>
+        <div
+          class="splitter"
+          role="separator"
+          tabindex="0"
+          aria-orientation="horizontal"
+          aria-label="Wysokość tabeli"
+          aria-valuemin={120}
+          aria-valuemax={tableMax()}
+          aria-valuenow={ui.tableHeight}
+          onpointerdown={startTableResize}
+          onkeydown={resizeTableByKey}
+        ></div>
         <div class="tabledock surface">
           {#if gml.layers.length}
-            <div class="docktabs" role="tablist" aria-label="Tabele">
-              <button role="tab" aria-selected={!tableLayer} class:on={!tableLayer} onclick={() => (ui.tableTab = 'points')}>
+            <div class="docktabs" role="tablist" aria-label="Tabele" use:rovingKeys>
+              <button role="tab" aria-selected={!tableLayer} tabindex={tableLayer ? -1 : 0} class:on={!tableLayer} onclick={() => (ui.tableTab = 'points')}>
                 <Icon name="table" size={15} /> Punkty
               </button>
               {#each gml.layers as l (l.id)}
-                <button role="tab" aria-selected={tableLayer === l} class:on={tableLayer === l} onclick={() => (ui.tableTab = l.id)}>
+                <button role="tab" aria-selected={tableLayer === l} tabindex={tableLayer === l ? 0 : -1} class:on={tableLayer === l} onclick={() => (ui.tableTab = l.id)}>
                   <Icon name="layers" size={15} /> {l.name}
                 </button>
               {/each}
@@ -295,11 +335,15 @@
       {:else}
         <button class="reopen" onclick={() => (ui.table = true)}><Icon name="table" size={16} /> Tabela punktów ({project.points.length})</button>
       {/if}
-    </div>
+    </main>
   </div>
 
-  <div class="toasts" aria-live="polite">
-    {#each toasts as t (t.id)}<div class="toast surface" class:error={t.kind === 'error'}>{t.text}</div>{/each}
+  <div class="toasts" role="status" aria-live="polite">
+    {#each toasts as t (t.id)}
+      <div class="toast surface" class:error={t.kind === 'error'}>
+        {#if t.kind === 'error'}<span class="sr-only">Błąd: </span>{/if}{t.text}
+      </div>
+    {/each}
   </div>
 </div>
 
@@ -424,9 +468,6 @@
     border-radius: 2px;
     background: var(--field-edge);
   }
-  .splitter:hover::after {
-    background: var(--accent);
-  }
   .tabledock {
     display: grid;
     grid-template-rows: auto 1fr;
@@ -525,7 +566,18 @@
   .map :global(.ol-zoom button:hover),
   .map :global(.ol-zoom button:focus-visible) {
     background: var(--field-bg);
+  }
+  /* Fokus mapy: obrys do środka karty, bo karta przycina to, co wystaje. */
+  .map:focus-visible {
+    outline-offset: -3px;
+    border-radius: 20px;
+  }
+  .workspace:focus {
     outline: none;
+  }
+  .splitter:focus-visible::after,
+  .splitter:hover::after {
+    background: var(--accent);
   }
   .map :global(.ol-attribution) {
     right: 10px;

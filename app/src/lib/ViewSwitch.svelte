@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { rovingKeys } from './a11y'
   import Icon from './Icon.svelte'
   import { ui, type ViewMode } from './project.svelte'
   import type { IconName } from './icons'
@@ -10,11 +11,12 @@
   ]
 </script>
 
-<div class="switch" role="radiogroup" aria-label="Tryb widoku">
+<div class="switch" role="radiogroup" aria-label="Tryb widoku" use:rovingKeys>
   {#each MODES as [mode, icon, label] (mode)}
     <button
       role="radio"
       aria-checked={ui.view === mode}
+      tabindex={ui.view === mode ? 0 : -1}
       aria-label={label}
       title={label}
       class:on={ui.view === mode}

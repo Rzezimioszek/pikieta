@@ -236,7 +236,7 @@
     <label class="field">Przedrostek numerów wynikowych<input bind:value={data.prefix} /></label>
   </div>
 
-  <h4>Punkty dostosowania</h4>
+  <h3>Punkty dostosowania</h3>
   <p class="hint">
     Te same punkty w obu układach. Puste współrzędne jednego z układów są brane z punktu projektu o tym numerze.
   </p>
@@ -282,7 +282,7 @@
     <p class="hint">Podaj co najmniej {data.method === 'helmert' ? 'dwa' : 'trzy'} punkty dostosowania.</p>
   {/if}
 
-  <h4>Punkty do przeliczenia</h4>
+  <h3>Punkty do przeliczenia</h3>
   <DataTable
     columns={rowColumns}
     rows={items}
@@ -315,7 +315,7 @@
 </div>
 
 <style>
-  h4 {
+  h3 {
     margin: 4px 0 0;
     font-size: 0.85rem;
   }

@@ -250,7 +250,7 @@
     </colgroup>
     <thead>
       <tr>
-        <th class="rn"></th>
+        <th class="rn"><span class="sr-only">Lp.</span></th>
         {#each columns as c (c.key)}
           <th
             class:right={c.align === 'right'}

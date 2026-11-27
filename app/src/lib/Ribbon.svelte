@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { rovingKeys } from './a11y'
   import Icon from './Icon.svelte'
   import { CALC_GROUPS, CALCS } from './calcs'
   import {
@@ -110,10 +111,16 @@
     <button class="burger" title="Lista obliczeń" aria-pressed={ui.sidebar} onclick={() => (ui.sidebar = !ui.sidebar)}>
       <Icon name="menu" />
     </button>
-    <span class="brand">Pikieta</span>
-    <div class="tabs" role="tablist">
+    <h1 class="brand">Pikieta</h1>
+    <div class="tabs" role="tablist" aria-label="Wstążka" use:rovingKeys>
       {#each TABS as [id, label] (id)}
-        <button role="tab" aria-selected={ui.ribbonTab === id} class:on={ui.ribbonTab === id && !ui.ribbonCollapsed} onclick={() => pickTab(id)}>
+        <button
+          role="tab"
+          id="ribbon-tab-{id}"
+          aria-selected={ui.ribbonTab === id}
+          aria-controls={ui.ribbonCollapsed ? undefined : 'ribbon-panel'}
+          tabindex={ui.ribbonTab === id ? 0 : -1}
+          class:on={ui.ribbonTab === id && !ui.ribbonCollapsed} onclick={() => pickTab(id)}>
           {label}
         </button>
       {/each}
@@ -122,6 +129,7 @@
     <button
       class="fold"
       title={ui.ribbonCollapsed ? 'Rozwiń wstążkę' : 'Zwiń wstążkę'}
+      aria-expanded={!ui.ribbonCollapsed}
       onclick={() => (ui.ribbonCollapsed = !ui.ribbonCollapsed)}
     >
       <Icon name={ui.ribbonCollapsed ? 'chevronDown' : 'chevronUp'} />
@@ -129,7 +137,7 @@
   </div>
 
   {#if !ui.ribbonCollapsed}
-    <div class="body" role="tabpanel">
+    <div class="body" id="ribbon-panel" role="tabpanel" aria-labelledby="ribbon-tab-{ui.ribbonTab}">
       {#if ui.ribbonTab === 'project'}
         <div class="group">
           <div class="btns">
@@ -305,6 +313,7 @@
     background: transparent;
   }
   .brand {
+    margin: 0;
     font-weight: 750;
     font-size: 1.05rem;
     letter-spacing: -0.01em;

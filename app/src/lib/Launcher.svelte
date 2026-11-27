@@ -8,7 +8,7 @@
 <div class="launcher" class:compact>
   {#each CALC_GROUPS as g (g.label)}
     <section>
-      <h4>{g.label}</h4>
+      <h3>{g.label}</h3>
       <div class="grid">
         {#each g.types as t (t)}
           <button class="item" onclick={() => onpick(t)}>
@@ -32,7 +32,7 @@
   .compact {
     gap: 8px;
   }
-  h4 {
+  h3 {
     margin-bottom: 6px;
     font-size: 0.72rem;
     font-weight: 650;

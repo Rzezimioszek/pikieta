@@ -29,6 +29,31 @@
     open = !open
   }
 
+  /** Fokus do panelu po otwarciu: panel jest na końcu dokumentu, więc Tab sam by do niego nie doszedł. */
+  function focusFirst(node: HTMLElement) {
+    queueMicrotask(() => node.querySelector<HTMLElement>('input:not(:disabled), button:not(:disabled)')?.focus())
+  }
+
+  function close() {
+    open = false
+    button?.focus()
+  }
+
+  /** Tab z ostatniego elementu panelu wraca do przycisku, a nie na koniec strony. */
+  function onPanelKey(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.stopPropagation()
+      close()
+    } else if (e.key === 'Tab') {
+      const items = [...panel!.querySelectorAll<HTMLElement>('input:not(:disabled), button:not(:disabled)')]
+      const edge = e.shiftKey ? items[0] : items.at(-1)
+      if (document.activeElement === edge) {
+        e.preventDefault()
+        close()
+      }
+    }
+  }
+
   /** Panel w `body`: wstążka ma `backdrop-filter`, który zamyka `position: fixed` w jej warstwie. */
   function portal(node: HTMLElement) {
     document.body.appendChild(node)
@@ -40,13 +65,15 @@
   }
 </script>
 
-<svelte:window onpointerdown={outside} onkeydown={(e) => e.key === 'Escape' && (open = false)} />
+<svelte:window onpointerdown={outside} onkeydown={(e) => e.key === 'Escape' && open && close()} />
 
 <button
   bind:this={button}
   class="big"
   class:on={ui.overlays.length > 0}
   aria-expanded={open}
+  aria-haspopup="dialog"
+  aria-controls={open ? 'services-panel' : undefined}
   title="Nakładki z usług GUGiK i innych instytucji"
   onclick={show}
 >
@@ -55,7 +82,19 @@
 </button>
 
 {#if open}
-  <div use:portal bind:this={panel} class="panel surface" style:top="{pos.top}px" style:left="{pos.left}px" role="dialog" aria-label="Nakładki">
+  <div
+    use:portal
+    use:focusFirst
+    bind:this={panel}
+    id="services-panel"
+    class="panel surface"
+    style:top="{pos.top}px"
+    style:left="{pos.left}px"
+    role="dialog"
+    aria-label="Nakładki"
+    tabindex="-1"
+    onkeydown={onPanelKey}
+  >
     <div class="head">
       <strong>Nakładki</strong>
       <button class="small" disabled={ui.overlays.length === 0} onclick={() => (ui.overlays = [])}>Wyłącz wszystkie</button>

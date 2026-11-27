@@ -7,6 +7,8 @@
   --glass-shadow: rgb(15 23 42 / 0.28);
   --field-bg: rgb(255 255 255 / 0.5);
   --field-edge: rgb(15 23 42 / 0.14);
+  /* Obrys pól i list: co najmniej 3:1 do tła (WCAG 1.4.11). */
+  --control-edge: rgb(15 23 42 / 0.5);
   --menu-bg: #ffffff;
   --ink: #0f172a;
   --ink-soft: rgb(15 23 42 / 0.66);
@@ -32,6 +34,7 @@
     --glass-shadow: rgb(0 0 0 / 0.5);
     --field-bg: rgb(255 255 255 / 0.09);
     --field-edge: rgb(255 255 255 / 0.16);
+    --control-edge: rgb(255 255 255 / 0.42);
     --menu-bg: #1f2937;
     --ink: #f8fafc;
     --ink-soft: rgb(248 250 252 / 0.7);
@@ -54,6 +57,30 @@
 @media (prefers-reduced-transparency: reduce) {
   :root {
     --glass-bg: Canvas;
+  }
+}
+/* Tryb wyższego kontrastu systemu: pełne tła, mocniejsze obrysy i tekst pomocniczy. */
+@media (prefers-contrast: more) {
+  :root {
+    --glass-bg: var(--menu-bg);
+    --surface: var(--menu-bg);
+    --table-bg: var(--menu-bg);
+    --field-bg: var(--menu-bg);
+    --ink-soft: color-mix(in srgb, var(--ink) 85%, transparent);
+    --field-edge: color-mix(in srgb, var(--ink) 45%, transparent);
+    --control-edge: var(--ink);
+    --grid-line: color-mix(in srgb, var(--ink) 25%, transparent);
+  }
+}
+/* Ograniczenie ruchu: bez animacji i przejść. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -105,6 +132,19 @@ button {
     border-color 0.15s,
     box-shadow 0.15s,
     background-color 0.15s;
+}
+input,
+select,
+textarea {
+  border-color: var(--control-edge);
+}
+textarea {
+  font: inherit;
+  color: inherit;
+  padding: 9px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--control-edge);
+  background: var(--field-bg);
 }
 input,
 select {
@@ -172,12 +212,65 @@ button.small {
   border-radius: 10px;
   font-size: 0.8rem;
 }
+/* Fokus klawiatury: pełny obrys 2 px z odstępem, widoczny na każdym tle (WCAG 2.4.7, 2.4.13). */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 input:focus-visible,
 select:focus-visible,
-button:focus-visible {
-  outline: none;
+textarea:focus-visible {
+  outline-offset: 0;
   border-color: var(--focus);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 35%, transparent);
+}
+/* Pole w komórce tabeli: obrys do środka, żeby nie chował się pod sąsiednimi komórkami. */
+td input:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Tekst tylko dla czytników ekranu. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* Link „przejdź do treści”: widoczny dopiero po wejściu klawiszem Tab. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--menu-bg);
+  color: var(--ink);
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+.skip-link:focus {
+  transform: none;
+}
+
+/* Tryb wymuszonych kolorów (np. kontrast systemu Windows): obrysy zamiast teł. */
+@media (forced-colors: active) {
+  button.ib,
+  button.ib.on {
+    border: 1px solid ButtonText;
+  }
+  button.ib.on,
+  button.primary {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+  :focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 .hint {
