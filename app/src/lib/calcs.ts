@@ -17,6 +17,7 @@ export type CalcType =
   | 'angleInt'
   | 'combinedInt'
   | 'construct'
+  | 'transform'
 
 export interface AzimuthData {
   rows: { from: string; to: string }[]
@@ -68,6 +69,15 @@ export interface ConstructData {
   /** Podział: na części albo co krok. */
   divideBy: 'parts' | 'step'
   firstId: string
+}
+export interface TransformData {
+  method: 'helmert' | 'affine'
+  hausbrandt: 'yes' | 'no'
+  /** Przedrostek numerów punktów przetransformowanych (np. „T”), żeby nie kolidowały z pierwotnymi. */
+  prefix: string
+  /** Punkty dostosowania: współrzędne pierwotne i wtórne; puste brane z projektu. */
+  control: { id: string; xs: string; ys: string; xt: string; yt: string }[]
+  rows: { id: string; x: string; y: string }[]
 }
 export interface CombinedIntData {
   id: string
@@ -218,6 +228,24 @@ export const CALCS: Record<CalcType, CalcInfo> = {
       return filled(d.a, d.b) ? `${names[d.mode]} ${d.a.trim()}–${d.b.trim()}` : 'Konstrukcje'
     },
   },
+  transform: {
+    label: 'Transformacja płaska',
+    short: 'Transformacja',
+    icon: 'transform',
+    hint: 'Helmerta albo afiniczna z punktów dostosowania, z korektą Hausbrandta i raportem odchyłek.',
+    init: (): TransformData => ({
+      method: 'helmert',
+      hausbrandt: 'yes',
+      prefix: '',
+      control: [{ id: '', xs: '', ys: '', xt: '', yt: '' }],
+      rows: [{ id: '', x: '', y: '' }],
+    }),
+    title: (d: TransformData) => {
+      const n = d.control.filter((r) => r.id.trim()).length
+      const name = d.method === 'helmert' ? 'Helmert' : 'Afiniczna'
+      return n >= 2 ? `${name} na ${n} punktach` : 'Transformacja płaska'
+    },
+  },
   combinedInt: {
     label: 'Wcięcie z wyrównaniem',
     short: 'Kombinowane',
@@ -320,6 +348,7 @@ export const CALC_GROUPS: { label: string; types: CalcType[] }[] = [
   { label: 'Domiary', types: ['offset', 'fromOffset'] },
   { label: 'Wcięcia', types: ['distInt', 'angleInt', 'combinedInt', 'lineInt', 'resection'] },
   { label: 'Konstrukcje', types: ['construct'] },
+  { label: 'Transformacje', types: ['transform'] },
   { label: 'Pola', types: ['area'] },
 ]
 

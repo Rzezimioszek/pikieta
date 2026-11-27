@@ -262,3 +262,17 @@ export function writePoints(points: Pt[], yx: boolean, decimals: number): string
     decimals,
   )
 }
+
+/** Transformacja płaska z punktów dostosowania i przeliczenie punktów (Helmert albo afiniczna). */
+export function planeTransform(kind: 'helmert' | 'affine', from: XY[], to: XY[], points: XY[], hausbrandt: boolean) {
+  const r = w.plane_transform(kind === 'helmert' ? 0 : 1, flat(from), flat(to), flat(points), hausbrandt)
+  const n = from.length
+  return {
+    m0: Number.isNaN(r[0]) ? null : r[0],
+    scale: { x: r[1], y: r[2] },
+    /** Obrót osi x i y [g], zgodnie z ruchem wskazówek zegara. */
+    rotation: { x: r[3], y: r[4] },
+    residuals: pointList(r.slice(5, 5 + 2 * n)),
+    points: pointList(r.slice(5 + 2 * n)),
+  }
+}

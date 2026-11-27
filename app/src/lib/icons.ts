@@ -42,6 +42,7 @@ export const ICONS = {
   lineInt: `M4 4l16 16M20 4 4 20${circle(12, 12, 2)}`,
   area: 'M5 18 7 6l9-2 4 9-6 7z',
   construct: `M3 20 21 4M3 14l12-10M12 21a9 9 0 0 0 0-18${circle(12, 12, 1.5)}`,
+  transform: 'M3 11h8v8H3zM14 3l6.5 1.7-1.7 6.5-6.5-1.7zM9 8l2-3M11 8V5H8',
   combinedInt: `${circle(4, 19, 1.5)}${circle(20, 19, 1.5)}${circle(12, 6, 2)}M5 17.6 11 7.7M13.4 7.4l5.6 10.2M5.5 19h13M15 3a9 9 0 0 1 5 3`,
   angleInt: `${circle(4, 19, 1.5)}${circle(20, 19, 1.5)}${circle(12, 5, 2)}M5.5 19h13M5 17.6 11 6.7M19 17.6 13 6.7M8 19a4 4 0 0 0-.7-2.3M16 19a4 4 0 0 1 .7-2.3`,
   resection: `${circle(12, 16, 2)}${circle(4, 5, 1.5)}${circle(20, 5, 1.5)}${circle(12, 3, 1.5)}M10.6 14.6 5 6.3M13.4 14.6 19 6.3M12 14V4.5`,

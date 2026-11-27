@@ -14,8 +14,12 @@ mod stakeout;
 pub use resection::{resection, ResectionResult};
 mod tachymetry;
 pub use stakeout::{grid_to_terrain, stakeout, StakeoutElements};
+mod transform;
 mod traverse;
 pub use tachymetry::{orientation, shot, Orientation, Shot, ShotOptions, ShotResult, Station};
+pub use transform::{
+    fit_transform, hausbrandt_correction, PlaneTransform, TransformFit, TransformKind,
+};
 pub use traverse::{traverse, Traverse, TraverseKind, TraverseResult};
 
 /// Poniżej tej wartości sinusa kąta między kierunkami proste uznajemy za równoległe.

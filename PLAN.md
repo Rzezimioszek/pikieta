@@ -205,7 +205,9 @@ Zrobione (22.11.2026):
 
 - konstrukcje (24.11.2026): przecięcie prostej z okręgiem, prosta równoległa (odsunięcie w lewo lub prawo) przecięta drugą prostą, podział odcinka na części lub co krok, spodek prostopadłej; numeracja wyników od pierwszego numeru (K1, K2, …).
 
-Następne w etapie 4a: transformacje płaskie (Helmert, afiniczna, Hausbrandt); w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
+- transformacje płaskie (27.11.2026): Helmerta (przez podobieństwo) i afiniczna metodą najmniejszych kwadratów na środkach ciężkości, korekta Hausbrandta (odchyłki ważone 1/d², punkty dostosowania dostają współrzędne wtórne), odchyłki vX, vY, v w mm, m₀, skale i kąty obrotu, oznaczanie punktów odstających (v > 3·√2·m₀); współrzędne jednego z układów mogą pochodzić z projektu, wklejanie list, przeliczenie zaznaczonych lub wszystkich punktów projektu z przedrostkiem numerów.
+
+Następne w etapie 4a: wyrównanie pól i podział działek; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
 
 ## Usługi mapowe
 

@@ -19,6 +19,7 @@
   import Offset from './calcs/Offset.svelte'
   import Polar from './calcs/Polar.svelte'
   import Resection from './calcs/Resection.svelte'
+  import Transform from './calcs/Transform.svelte'
   import Stakeout from './calcs/Stakeout.svelte'
   import Tachy from './calcs/Tachy.svelte'
   import Traverse from './calcs/Traverse.svelte'
@@ -50,6 +51,7 @@
     tachy: Tachy,
     stakeout: Stakeout,
     resection: Resection,
+    transform: Transform,
     angleInt: AngleInt,
     combinedInt: CombinedInt,
     construct: Construct,

@@ -626,3 +626,40 @@ pub fn perpendicular_foot(coords: &[f64]) -> Option<Vec<f64>> {
         _ => None,
     }
 }
+
+/// Transformacja płaska z punktów dostosowania (`from`, `to`: płaskie listy x, y) i przeliczenie
+/// punktów `points`. `kind`: 0 Helmert, 1 afiniczna. Zwraca `[m0, skala x, skala y, obrót x [g],
+/// obrót y [g], vx, vy…(na punktach dostosowania), x, y…(punkty przetransformowane)]`; m0 = NaN bez
+/// punktów nadliczbowych.
+#[wasm_bindgen]
+pub fn plane_transform(
+    kind: u8,
+    from: &[f64],
+    to: &[f64],
+    points: &[f64],
+    hausbrandt: bool,
+) -> Result<Vec<f64>, JsError> {
+    let kind = match kind {
+        0 => pikieta_calc::TransformKind::Helmert,
+        _ => pikieta_calc::TransformKind::Affine,
+    };
+    let from = points_from_flat(from);
+    let fit = pikieta_calc::fit_transform(kind, &from, &points_from_flat(to))
+        .map_err(|e| JsError::new(&e))?;
+    let (sx, sy) = fit.transform.scales();
+    let (rx, ry) = fit.transform.rotations();
+    let mut out = vec![
+        fit.m0.unwrap_or(f64::NAN),
+        sx,
+        sy,
+        rad_to_grad(rx),
+        rad_to_grad(ry),
+    ];
+    out.extend(flat_points(&fit.residuals));
+    let moved: Vec<Point2> = points_from_flat(points)
+        .into_iter()
+        .map(|p| fit.apply(&from, p, hausbrandt))
+        .collect();
+    out.extend(flat_points(&moved));
+    Ok(out)
+}
