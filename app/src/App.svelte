@@ -3,6 +3,7 @@
   import { rovingKeys } from './lib/a11y'
   import CalcList from './lib/CalcList.svelte'
   import Icon from './lib/Icon.svelte'
+  import ImportPreview from './lib/ImportPreview.svelte'
   import GmlTable from './lib/GmlTable.svelte'
   import PointTable from './lib/PointTable.svelte'
   import Ribbon from './lib/Ribbon.svelte'
@@ -242,6 +243,7 @@
 <a class="skip-link" href="#workspace">Przejdź do obszaru roboczego</a>
 
 <TaskPicker />
+<ImportPreview {crsLabel} />
 
 <div class="app">
   <Ribbon {crsLabel} onzoom={zoomTo} onchangecrs={changeCrs} />

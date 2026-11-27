@@ -106,20 +106,40 @@ export async function openText(type: FileType): Promise<{ name: string; text: st
 
 // --- Punkty ---
 
-/** Wczytuje wykaz współrzędnych do projektu; zwraca wczytane punkty. */
+/** Wykaz czekający w oknie podglądu na potwierdzenie (punkty w kolejności Nr X Y, bez zamiany). */
+export const importDraft = $state<{
+  draft: { name: string; points: Pt[]; errors: string[] } | null
+}>({ draft: null })
+let settle: ((pts: Pt[]) => void) | null = null
+
+/** Wybór pliku i okno podglądu; zwraca wczytane punkty (pusta lista po anulowaniu). */
 export async function importPoints(): Promise<Pt[]> {
   const file = await openText(TXT)
   if (!file) return []
-  const parsed = parsePoints(file.text, ui.yx)
-  const replaced = addPoints(parsed.points)
+  const parsed = parsePoints(file.text, false)
+  settle?.([])
+  importDraft.draft = { name: file.name, ...parsed }
+  return new Promise((resolve) => (settle = resolve))
+}
+
+/** Potwierdzenie z okna podglądu: dodaje punkty, istniejące numery zastępuje albo pomija. */
+export function finishImport(points: Pt[] | null, replace: boolean) {
+  const name = importDraft.draft?.name ?? ''
+  importDraft.draft = null
+  const done = settle
+  settle = null
+  if (!points) return done?.([])
+  const existing = new Set(project.points.map((p) => p.id))
+  const add = replace ? points : points.filter((p) => !existing.has(p.id))
+  const replaced = addPoints(add)
+  const skipped = points.length - add.length
   notify(
-    `${file.name}: wczytano ${parsed.points.length} pkt` +
+    `${name}: wczytano ${add.length} pkt` +
       (replaced ? `, zastąpiono ${replaced}` : '') +
-      (parsed.errors.length ? `, pominięto ${parsed.errors.length} wierszy (${parsed.errors.slice(0, 2).join('; ')})` : '') +
+      (skipped ? `, pominięto ${skipped} o istniejących numerach` : '') +
       '.',
-    parsed.points.length === 0 ? 'error' : 'info',
   )
-  return parsed.points
+  done?.(add)
 }
 
 export async function exportPoints() {
@@ -161,7 +181,13 @@ const VERSION = 1
 export const projectFile = $state({ name: '' })
 
 export async function saveProjectFile() {
-  const doc = { format: FORMAT, version: VERSION, saved: new Date().toISOString(), ...project, gml: await layersForProject() }
+  const doc = {
+    format: FORMAT,
+    version: VERSION,
+    saved: new Date().toISOString(),
+    ...project,
+    gml: await layersForProject(),
+  }
   const name = await saveText(projectFile.name || 'projekt.pikieta', JSON.stringify(doc, null, 1), PROJECT)
   if (!name) return
   projectFile.name = name

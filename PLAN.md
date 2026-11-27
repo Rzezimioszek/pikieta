@@ -232,7 +232,15 @@ Zrobione:
 - kontrola punktów w transformacji testem „bez punktu” i flaga „Użyj” (27.11.2026);
 - jedno okno wyboru zadania (27.11.2026). Otwierają je przycisk „Nowe obliczenie”, karta „Obliczenia” na wstążce (całe okno, okno zawężone do grupy albo jedno z czterech ostatnio używanych zadań jednym kliknięciem) i Ctrl+K. Okno ma wyszukiwanie po nazwie, opisie, grupie i słowach kluczowych bez polskich znaków, zawsze widoczne opisy, Enter otwiera pierwsze trafienie, a na telefonie zajmuje cały ekran. Usunięte zostały lista rozwijana w panelu obliczeń, osobny launcher w pustym panelu zadania i krótkie nazwy przycisków.
 
-Następne według briefu: jedna historia i słownik pojęć, pasek startowy w pustym projekcie, podgląd importu z wykrywaniem X/Y, rozdzielona zmiana układu, „Zapisz wynik”, wklejanie obserwacji w tachimetrii, rysunek w raporcie, panel warstw.
+- podgląd importu wykazu współrzędnych (27.11.2026):
+  - kolejność kolumn Nr X Y albo Nr Y X wykrywana z tego, przy której punkty leżą w Polsce w układzie projektu;
+  - ostrzeżenie przy złej kolejności i wskazanie innej strefy układu 2000 (z cyfry milionów Y);
+  - pierwsze wiersze z opisami „X (północ)” i „Y (wschód)”;
+  - lista numerów już w projekcie z przesunięciem i wybór: zastąp albo pomiń;
+  - pełna lista pominiętych wierszy;
+  - wybrana kolejność zapamiętana dla eksportu.
+
+Następne według briefu: jedna historia i słownik pojęć, pasek startowy w pustym projekcie, rozdzielona zmiana układu, „Zapisz wynik”, wklejanie obserwacji w tachimetrii, rysunek w raporcie, panel warstw.
 
 ## Eksport wyników (wątek na później)
 
