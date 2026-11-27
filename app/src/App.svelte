@@ -50,8 +50,9 @@
   const crsLabel = $derived(CRS_LIST.find((c) => c.code === project.crs)?.label ?? project.crs)
   const epsg = $derived(epsgOf(project.crs))
   const cursorGeo = $derived(coreVersion && cursor ? toGeodetic(epsg, cursor) : null)
-  /** Panel narzędzia: zawsze w podziale i pełnym ekranie, w trybie mapy tylko z otwartym dokumentem. */
-  const toolVisible = $derived(ui.view !== 'map' || ui.active !== null)
+  /** Panel narzędzia: zawsze w podziale i pełnym ekranie, w trybie mapy z otwartym dokumentem albo
+   *  z paskiem startowym, dopóki w projekcie nie ma żadnego obliczenia. */
+  const toolVisible = $derived(ui.view !== 'map' || ui.active !== null || project.calcs.length === 0)
 
   /** Zmiana układu projektu: z przeliczeniem punktów (zostają w tym samym miejscu w terenie) albo bez
    *  (liczby bez zmian, np. gdy punkty wczytano w złym układzie). */
@@ -307,6 +308,7 @@
             onsketch={(s) => (sketch = s)}
             onzoomgml={zoomToGml}
             onfocusgml={focusGml}
+            onzoom={zoomTo}
           />
         {/if}
       </div>

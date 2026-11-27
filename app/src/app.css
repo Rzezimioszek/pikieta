@@ -2,56 +2,55 @@
   color-scheme: light dark;
   font-family: system-ui, sans-serif;
 
-  --glass-bg: rgb(255 255 255 / 0.58);
-  --glass-edge: rgb(255 255 255 / 0.7);
-  --glass-shadow: rgb(15 23 42 / 0.28);
-  --field-bg: rgb(255 255 255 / 0.5);
-  --field-edge: rgb(15 23 42 / 0.14);
-  /* Obrys pól i list: co najmniej 3:1 do tła (WCAG 1.4.11). */
-  --control-edge: rgb(15 23 42 / 0.5);
+  /* Szkło tylko nad mapą (przyciski i podpisy na mapie): mocniejsze tło, żeby tekst był czytelny na
+     każdym podkładzie. */
+  --glass-bg: rgb(255 255 255 / 0.78);
+  --glass-edge: rgb(15 23 42 / 0.18);
+  --glass-shadow: rgb(15 23 42 / 0.22);
+  /* Panele: pełne, jednolite tła bez gradientów i przezroczystości. */
+  --app-bg: #dde3ea;
+  --surface: #ffffff;
   --menu-bg: #ffffff;
+  --field-bg: #f3f5f8;
+  --field-edge: #c5cdd8;
+  /* Obrys pól i list: co najmniej 3:1 do tła (WCAG 1.4.11). */
+  --control-edge: #6b7686;
   --ink: #0f172a;
-  --ink-soft: rgb(15 23 42 / 0.66);
-  --accent: #b45309;
+  --ink-soft: #3d4757;
+  --accent: #a3480a;
   --on-accent: #ffffff;
-  --focus: #2563eb;
+  --focus: #1d4ed8;
   --danger: #b91c1c;
-  --ok: #15803d;
-  --app-bg:
-    radial-gradient(1200px 700px at 10% -10%, #c7d2fe 0%, transparent 60%),
-    radial-gradient(900px 600px at 100% 100%, #fde68a 0%, transparent 55%), #e2e8f0;
-  --surface: rgb(255 255 255 / 0.62);
-  --table-bg: rgb(255 255 255 / 0.72);
-  --table-head: #f1f5f9;
-  --table-stripe: rgb(15 23 42 / 0.025);
-  --grid-line: rgb(15 23 42 / 0.08);
-  --select-bg: rgb(37 99 235 / 0.16);
+  --ok: #166534;
+  --table-bg: #ffffff;
+  --table-head: #e8ecf1;
+  --table-stripe: #f6f8fa;
+  --grid-line: #dfe4ea;
+  --select-bg: #dbe6fd;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --glass-bg: rgb(17 24 39 / 0.42);
-    --glass-edge: rgb(255 255 255 / 0.22);
-    --glass-shadow: rgb(0 0 0 / 0.5);
-    --field-bg: rgb(255 255 255 / 0.09);
-    --field-edge: rgb(255 255 255 / 0.16);
-    --control-edge: rgb(255 255 255 / 0.42);
-    --menu-bg: #1f2937;
-    --ink: #f8fafc;
-    --ink-soft: rgb(248 250 252 / 0.7);
+    --glass-bg: rgb(17 24 39 / 0.76);
+    --glass-edge: rgb(255 255 255 / 0.2);
+    --glass-shadow: rgb(0 0 0 / 0.45);
+    --app-bg: #0c111b;
+    --surface: #161d2a;
+    --menu-bg: #1c2433;
+    --field-bg: #212a3a;
+    --field-edge: #3a4558;
+    --control-edge: #8792a5;
+    --ink: #f5f7fa;
+    --ink-soft: #c3cad6;
     --accent: #fbbf24;
     --on-accent: #111827;
     --focus: #93c5fd;
     --danger: #fca5a5;
     --ok: #86efac;
-    --app-bg:
-      radial-gradient(1200px 700px at 10% -10%, #1e3a8a 0%, transparent 60%),
-      radial-gradient(900px 600px at 100% 100%, #78350f 0%, transparent 55%), #0b1120;
-    --surface: rgb(17 24 39 / 0.55);
-    --table-bg: rgb(15 23 42 / 0.55);
-    --table-head: #1e293b;
-    --table-stripe: rgb(255 255 255 / 0.025);
-    --grid-line: rgb(255 255 255 / 0.07);
-    --select-bg: rgb(147 197 253 / 0.2);
+    --table-bg: #161d2a;
+    --table-head: #212a3a;
+    --table-stripe: #1a2231;
+    --grid-line: #2b3546;
+    --select-bg: #1e3a64;
   }
 }
 @media (prefers-reduced-transparency: reduce) {
@@ -93,28 +92,16 @@
 
 body {
   background: var(--app-bg);
-  background-attachment: fixed;
   color: var(--ink);
 }
 
-/* Szklana tafla paneli: rozmycie tła, jasna krawędź od góry i miękki cień. */
+/* Panel: pełne tło, cienka krawędź i lekki cień. Szkło zostaje tylko na elementach nad mapą. */
 .surface {
   position: relative;
   background: var(--surface);
-  -webkit-backdrop-filter: blur(22px) saturate(170%);
-  backdrop-filter: blur(22px) saturate(170%);
-  border: 1px solid var(--glass-edge);
+  border: 1px solid var(--field-edge);
   border-radius: 20px;
-  box-shadow:
-    0 10px 30px var(--glass-shadow),
-    inset 0 1px 0 rgb(255 255 255 / 0.45);
-}
-@media (prefers-reduced-transparency: reduce) {
-  .surface {
-    background: var(--menu-bg);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
+  box-shadow: 0 2px 10px rgb(15 23 42 / 0.08);
 }
 
 /* Kontrolki wspólne dla wszystkich paneli. */
@@ -149,7 +136,8 @@ textarea {
 input,
 select {
   width: 100%;
-  box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.08);
+  background: var(--surface);
+  box-shadow: none;
 }
 input {
   font-variant-numeric: tabular-nums;
@@ -174,7 +162,7 @@ button {
   white-space: nowrap;
 }
 button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--field-bg) 60%, var(--ink) 12%);
+  background: color-mix(in srgb, var(--field-bg), var(--ink) 9%);
 }
 button:disabled {
   opacity: 0.45;

@@ -3,6 +3,7 @@
   import { untrack } from 'svelte'
   import Icon from './Icon.svelte'
   import ReportView from './ReportView.svelte'
+  import StartSteps from './StartSteps.svelte'
   import GmlView from './GmlView.svelte'
   import { findLayer, type GmlLayer } from './gml.svelte'
   import ViewSwitch from './ViewSwitch.svelte'
@@ -24,8 +25,9 @@
   import Stakeout from './calcs/Stakeout.svelte'
   import Tachy from './calcs/Tachy.svelte'
   import Traverse from './calcs/Traverse.svelte'
+  import type { XY } from './core'
   import type { Sketch } from './map'
-  import { closeCalc, findCalc, openTaskPicker, picker, project, ui } from './project.svelte'
+  import { closeCalc, findCalc, picker, project, ui } from './project.svelte'
 
   interface Props {
     ready: boolean
@@ -34,8 +36,9 @@
     onsketch: (s: Sketch) => void
     onzoomgml: (target: string[] | { layer: string }) => void
     onfocusgml: (layer: GmlLayer, feature: number) => void
+    onzoom: (points: XY[]) => void
   }
-  let { ready, epsg, crsLabel, onsketch, onzoomgml, onfocusgml }: Props = $props()
+  let { ready, epsg, crsLabel, onsketch, onzoomgml, onfocusgml, onzoom }: Props = $props()
 
   const gmlLayer = $derived(ui.active?.kind === 'gml' ? findLayer(ui.active.id) : undefined)
 
@@ -178,15 +181,7 @@
     {:else if gmlLayer}
       {#key gmlLayer.id}<GmlView layer={gmlLayer} onzoom={onzoomgml} onfocus={onfocusgml} />{/key}
     {:else}
-      <div class="start">
-        <p>
-          Nowe obliczenie zaczyna się od wyboru zadania. To samo okno wyboru otwierają przycisk „Nowe obliczenie” nad
-          historią obliczeń, karta „Obliczenia” na wstążce i skrót Ctrl+K.
-        </p>
-        <button class="primary" onclick={() => openTaskPicker()} aria-haspopup="dialog">
-          <Icon name="plus" /> Wybierz zadanie
-        </button>
-      </div>
+      <StartSteps {onzoom} />
     {/if}
   </div>
 </section>
@@ -261,22 +256,6 @@
     height: 34px;
     padding: 0;
     border-radius: 11px;
-  }
-  .start {
-    display: grid;
-    justify-items: start;
-    gap: 12px;
-    max-width: 52ch;
-  }
-  .start p {
-    margin: 0;
-    color: var(--ink-soft);
-    line-height: 1.45;
-  }
-  .start .primary {
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
   .body {
     overflow: auto;

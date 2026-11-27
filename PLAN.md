@@ -267,7 +267,9 @@ Słownik pojęć interfejsu (te słowa i tylko w tym znaczeniu):
 | Widok | „Mapa”, „Mapa i obliczenie obok siebie”, „Obliczenie na pełnym ekranie” |
 | Miejsca po przecinku | dokładność wyświetlania wyników, nie dokładność pomiaru |
 
-Następne według briefu: pasek startowy w pustym projekcie, „Zapisz wynik”, wklejanie obserwacji w tachimetrii, rysunek w raporcie, panel warstw.
+- pasek startowy (27.11.2026): w panelu bez otwartego obliczenia trzy kroki „Punkty → Obliczenie → Raport” z przyciskami (wczytaj wykaz, dodawaj na mapie, wybierz zadanie, pokaż raport), odhaczane w miarę postępu, z wyróżnionym następnym krokiem; dopóki w projekcie nie ma obliczenia, panel jest widoczny także w widoku mapy, więc nowa osoba widzi go od pierwszego uruchomienia.
+
+Następne według briefu: „Zapisz wynik”, wklejanie obserwacji w tachimetrii, rysunek w raporcie, panel warstw.
 
 ## Eksport wyników (wątek na później)
 
