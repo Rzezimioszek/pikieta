@@ -299,7 +299,18 @@
           {#each columns as c, ci (c.key)}
             {@const tone = c.tone?.(it.row)}
             <td class:right={c.align === 'right'} class={tone}>
-              {#if editing && c.edit && c.set}
+              {#if c.hidden?.(it.row)}
+                <span class="cell"></span>
+              {:else if c.edit === 'check' && c.set}
+                <input
+                  type="checkbox"
+                  class="check"
+                  aria-label={`${c.label}, wiersz ${it.pos + 1}`}
+                  checked={c.value(it.row) === '1'}
+                  disabled={!editing}
+                  onchange={(e) => c.set?.(it.row, e.currentTarget.checked ? '1' : '')}
+                />
+              {:else if editing && c.edit && c.set}
                 <input
                   data-r={it.pos}
                   data-c={ci}
@@ -504,6 +515,14 @@
   }
   td input::placeholder {
     font-style: italic;
+  }
+  td input.check {
+    display: block;
+    width: 16px;
+    height: 16px;
+    margin: 0 auto;
+    padding: 0;
+    accent-color: var(--accent, currentColor);
   }
   td.error {
     color: var(--danger);

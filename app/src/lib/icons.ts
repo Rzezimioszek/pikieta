@@ -41,6 +41,8 @@ export const ICONS = {
   distInt: `${circle(9, 12, 5)}${circle(15, 12, 5)}`,
   lineInt: `M4 4l16 16M20 4 4 20${circle(12, 12, 2)}`,
   area: 'M5 18 7 6l9-2 4 9-6 7z',
+  areaAdjust: 'M5 18 7 6l9-2 4 9-6 7zM9 13h6M12 10v6',
+  division: 'M5 18 7 6l9-2 4 9-6 7zM11.5 4.9 9.6 19.2',
   construct: `M3 20 21 4M3 14l12-10M12 21a9 9 0 0 0 0-18${circle(12, 12, 1.5)}`,
   transform: 'M3 11h8v8H3zM14 3l6.5 1.7-1.7 6.5-6.5-1.7zM9 8l2-3M11 8V5H8',
   combinedInt: `${circle(4, 19, 1.5)}${circle(20, 19, 1.5)}${circle(12, 6, 2)}M5 17.6 11 7.7M13.4 7.4l5.6 10.2M5.5 19h13M15 3a9 9 0 0 1 5 3`,

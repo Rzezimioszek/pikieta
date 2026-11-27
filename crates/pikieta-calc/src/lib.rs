@@ -6,9 +6,11 @@ use pikieta_core::Point2;
 use std::f64::consts::TAU;
 
 mod construct;
+mod division;
 mod intersection;
 pub use construct::{divide, divide_every, foot, line_circle, parallel_intersection};
 mod resection;
+pub use division::{distribute_area, divide_from_point, divide_parallel, Division};
 pub use intersection::{intersection, IntersectionResult, Observation};
 mod stakeout;
 pub use resection::{resection, ResectionResult};
@@ -18,7 +20,8 @@ mod transform;
 mod traverse;
 pub use tachymetry::{orientation, shot, Orientation, Shot, ShotOptions, ShotResult, Station};
 pub use transform::{
-    fit_transform, hausbrandt_correction, PlaneTransform, TransformFit, TransformKind,
+    check_control, fit_transform, hausbrandt_correction, PlaneTransform, PointCheck, TransformFit,
+    TransformKind, CHECK_ALPHA,
 };
 pub use traverse::{traverse, Traverse, TraverseKind, TraverseResult};
 

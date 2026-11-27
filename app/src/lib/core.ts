@@ -273,6 +273,26 @@ export function planeTransform(kind: 'helmert' | 'affine', from: XY[], to: XY[],
     /** Obrót osi x i y [g], zgodnie z ruchem wskazówek zegara. */
     rotation: { x: r[3], y: r[4] },
     residuals: pointList(r.slice(5, 5 + 2 * n)),
-    points: pointList(r.slice(5 + 2 * n)),
+    /** Kontrola bez punktu: odległość od transformacji z pozostałych punktów i odchyłka dopuszczalna
+     *  [m]; `null`, gdy bez punktu zostaje za mało obserwacji nadliczbowych. */
+    checks: pointList(r.slice(5 + 2 * n, 5 + 4 * n)).map((c) =>
+      Number.isNaN(c.x) ? null : { misfit: c.x, limit: c.y, suspect: c.x > c.y },
+    ),
+    points: pointList(r.slice(5 + 4 * n)),
   }
+}
+
+/** Podział działki: równolegle do prostej A→B (`dir`) albo z wierzchołka o indeksie `start`. */
+export function divideParcel(poly: XY[], dir: [XY, XY] | null, start: number, parts: number[]) {
+  const r = JSON.parse(w.divide_parcel(flat(poly), flat(dir ?? []), start, new Float64Array(parts))) as {
+    cuts: [number, number][][]
+    areas: number[]
+    outside: boolean
+  }
+  return { cuts: r.cuts.map((c) => c.map(([x, y]) => ({ x, y }))), areas: r.areas, outside: r.outside }
+}
+
+/** Rozrzucenie odchyłki pola na części proporcjonalnie, zaokrąglone do `unit` z zachowaniem sumy. */
+export function distributeArea(total: number, parts: number[], unit: number): number[] {
+  return Array.from(w.distribute_area(total, new Float64Array(parts), unit))
 }

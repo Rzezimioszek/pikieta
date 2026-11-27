@@ -18,6 +18,8 @@ export type CalcType =
   | 'combinedInt'
   | 'construct'
   | 'transform'
+  | 'areaAdjust'
+  | 'division'
 
 export interface AzimuthData {
   rows: { from: string; to: string }[]
@@ -70,13 +72,36 @@ export interface ConstructData {
   divideBy: 'parts' | 'step'
   firstId: string
 }
+export interface AreaAdjustData {
+  total: string
+  /** Jednostka zaokrąglenia pól [m²]. */
+  unit: '1' | '0.1' | '0.01'
+  limit: string
+  rows: { name: string; area: string }[]
+}
+export interface DivisionData {
+  mode: 'parallel' | 'point'
+  /** Wierzchołki działki w kolejności obejścia. */
+  rows: { id: string }[]
+  /** Kierunek linii podziału (podział równoległy). */
+  a: string
+  b: string
+  /** Wierzchołek, z którego wychodzą linie podziału. */
+  start: string
+  split: 'areas' | 'equal'
+  /** Pola kolejnych części [m², ewidencyjne]; ostatnia część to reszta. */
+  parts: { area: string }[]
+  n: string
+  firstId: string
+}
 export interface TransformData {
   method: 'helmert' | 'affine'
   hausbrandt: 'yes' | 'no'
   /** Przedrostek numerów punktów przetransformowanych (np. „T”), żeby nie kolidowały z pierwotnymi. */
   prefix: string
   /** Punkty dostosowania: współrzędne pierwotne i wtórne; puste brane z projektu. */
-  control: { id: string; xs: string; ys: string; xt: string; yt: string }[]
+  /** `skip: '1'` wyłącza punkt z dopasowania (zostaje w tabeli, nadal jest sprawdzany). */
+  control: { id: string; xs: string; ys: string; xt: string; yt: string; skip?: string }[]
   rows: { id: string; x: string; y: string }[]
 }
 export interface CombinedIntData {
@@ -228,6 +253,35 @@ export const CALCS: Record<CalcType, CalcInfo> = {
       return filled(d.a, d.b) ? `${names[d.mode]} ${d.a.trim()}–${d.b.trim()}` : 'Konstrukcje'
     },
   },
+  areaAdjust: {
+    label: 'Wyrównanie pól',
+    short: 'Wyrównanie pól',
+    icon: 'areaAdjust',
+    hint: 'Rozrzucenie odchyłki między polem działki a sumą pól użytków lub części.',
+    init: (): AreaAdjustData => ({ total: '', unit: '1', limit: '', rows: [{ name: '', area: '' }] }),
+    title: (d: AreaAdjustData) => (d.total.trim() ? `Wyrównanie pól do ${d.total.trim()} m²` : 'Wyrównanie pól'),
+  },
+  division: {
+    label: 'Podział działki',
+    short: 'Podział',
+    icon: 'division',
+    hint: 'Podział na części o zadanych polach albo równe: równolegle do boku lub z punktu.',
+    init: (): DivisionData => ({
+      mode: 'parallel',
+      rows: [{ id: '' }],
+      a: '',
+      b: '',
+      start: '',
+      split: 'areas',
+      parts: [{ area: '' }],
+      n: '',
+      firstId: '',
+    }),
+    title: (d: DivisionData) => {
+      const ids = d.rows.map((r) => r.id.trim()).filter(Boolean)
+      return ids.length >= 3 ? `Podział ${ids.slice(0, 4).join('-')}${ids.length > 4 ? '…' : ''}` : 'Podział działki'
+    },
+  },
   transform: {
     label: 'Transformacja płaska',
     short: 'Transformacja',
@@ -349,7 +403,7 @@ export const CALC_GROUPS: { label: string; types: CalcType[] }[] = [
   { label: 'Wcięcia', types: ['distInt', 'angleInt', 'combinedInt', 'lineInt', 'resection'] },
   { label: 'Konstrukcje', types: ['construct'] },
   { label: 'Transformacje', types: ['transform'] },
-  { label: 'Pola', types: ['area'] },
+  { label: 'Pola', types: ['area', 'areaAdjust', 'division'] },
 ]
 
 export const calcTitle = (s: CalcSession) => s.name ?? CALCS[s.type].title(s.data)

@@ -20,6 +20,8 @@
   import Polar from './calcs/Polar.svelte'
   import Resection from './calcs/Resection.svelte'
   import Transform from './calcs/Transform.svelte'
+  import AreaAdjust from './calcs/AreaAdjust.svelte'
+  import Division from './calcs/Division.svelte'
   import Stakeout from './calcs/Stakeout.svelte'
   import Tachy from './calcs/Tachy.svelte'
   import Traverse from './calcs/Traverse.svelte'
@@ -52,6 +54,8 @@
     stakeout: Stakeout,
     resection: Resection,
     transform: Transform,
+    areaAdjust: AreaAdjust,
+    division: Division,
     angleInt: AngleInt,
     combinedInt: CombinedInt,
     construct: Construct,

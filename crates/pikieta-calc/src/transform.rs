@@ -169,6 +169,94 @@ pub fn fit_transform(
     })
 }
 
+/// Kontrola punktu dostosowania testem „bez tego punktu”: transformacja dopasowana do pozostałych
+/// punktów przenosi go do układu wtórnego, a odległość od jego współrzędnych wtórnych porównuje się
+/// z odchyłką dopuszczalną. Gruby błąd punktu nie zawyża wtedy błędu średniego, z którym go
+/// porównujemy, ani nie rozkłada się na sąsiednie punkty, jak w zwykłych odchyłkach.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PointCheck {
+    /// Odległość współrzędnych wtórnych od przetransformowanych bez tego punktu [m].
+    pub misfit: f64,
+    /// Odchyłka dopuszczalna [m]; większa oznacza punkt do sprawdzenia.
+    pub limit: f64,
+}
+
+impl PointCheck {
+    pub fn suspect(&self) -> bool {
+        self.misfit > self.limit
+    }
+}
+
+/// Poziom istotności testu: tyle wynosi szansa oznaczenia dobrego punktu.
+pub const CHECK_ALPHA: f64 = 0.01;
+/// Najmniejszy błąd średni przyjmowany w teście [m], żeby dane bez szumu (np. wpisane z innego
+/// programu z zaokrągleniem) nie dawały progów rzędu mikrometrów.
+const M0_FLOOR: f64 = 1e-4;
+
+/// Kontrola każdego punktu dostosowania (kolejność jak w `from`). `None`, gdy bez tego punktu nie
+/// zostają co najmniej dwie obserwacje nadliczbowe: wtedy punktu nie da się sprawdzić.
+///
+/// Statystyka `d² / (2·(1 + h)·m0²)`, gdzie `d` to odległość, `m0` błąd średni dopasowania bez
+/// punktu, a `h` wpływ położenia punktu względem pozostałych (dalej od środka, większa
+/// niepewność), ma rozkład F(2, r) dla r obserwacji nadliczbowych; jego kwantyl ma postać
+/// zamkniętą `r/2·(α^(−2/r) − 1)`.
+pub fn check_control(
+    kind: TransformKind,
+    from: &[Point2],
+    to: &[Point2],
+) -> Vec<Option<PointCheck>> {
+    let n = from.len().min(to.len());
+    let u = kind.unknowns();
+    (0..n)
+        .map(|i| {
+            if n < 2 || 2 * (n - 1) < u + 2 {
+                return None;
+            }
+            let rest = |pts: &[Point2]| -> Vec<Point2> {
+                pts[..n]
+                    .iter()
+                    .enumerate()
+                    .filter(|(j, _)| *j != i)
+                    .map(|(_, p)| *p)
+                    .collect()
+            };
+            let (f, t) = (rest(from), rest(to));
+            let fit = fit_transform(kind, &f, &t).ok()?;
+            let m0 = fit.m0?.max(M0_FLOOR);
+            let q = fit.transform.apply(from[i]);
+            let misfit = (to[i].x - q.x).hypot(to[i].y - q.y);
+            let h = leverage(kind, &f, from[i]);
+            let r = (2 * (n - 1) - u) as f64;
+            let f_crit = r / 2.0 * (CHECK_ALPHA.powf(-2.0 / r) - 1.0);
+            Some(PointCheck {
+                misfit,
+                limit: m0 * (2.0 * (1.0 + h) * f_crit).sqrt(),
+            })
+        })
+        .collect()
+}
+
+/// Wariancja współrzędnej punktu przetransformowanego, w jednostkach σ²: `1/n` od środka ciężkości
+/// plus część od obrotu i skal, rosnąca z odległością od środka.
+fn leverage(kind: TransformKind, from: &[Point2], p: Point2) -> f64 {
+    let n = from.len() as f64;
+    let (cx, cy) = from
+        .iter()
+        .fold((0.0, 0.0), |(x, y), q| (x + q.x / n, y + q.y / n));
+    let (dx, dy) = (p.x - cx, p.y - cy);
+    let (sxx, sxy, syy) = from.iter().fold((0.0, 0.0, 0.0), |(a, b, c), q| {
+        let (x, y) = (q.x - cx, q.y - cy);
+        (a + x * x, b + x * y, c + y * y)
+    });
+    let part = match kind {
+        TransformKind::Helmert => (dx * dx + dy * dy) / (sxx + syy),
+        TransformKind::Affine => {
+            (syy * dx * dx - 2.0 * sxy * dx * dy + sxx * dy * dy) / (sxx * syy - sxy * sxy)
+        }
+    };
+    1.0 / n + part
+}
+
 /// Korekta Hausbrandta: średnia odchyłek punktów dostosowania ważona odwrotnością kwadratu
 /// odległości (w układzie pierwotnym). Na punkcie dostosowania równa jego odchyłce, więc
 /// punkty dostosowania dostają po transformacji dokładnie współrzędne wtórne.
@@ -295,5 +383,61 @@ mod tests {
             r.transform.apply(mid),
             1e-12
         ));
+    }
+
+    /// Typowe zadanie: 5 punktów z szumem kilku milimetrów, jeden przesunięty o 30 cm. Zwykły próg
+    /// 3·√2·m0 na odchyłkach nie może go wykryć przy tak małej liczbie punktów; test bez punktu tak.
+    #[test]
+    fn leave_one_out_finds_gross_error_with_few_points() {
+        let from = [
+            Point2::new(0.0, 0.0),
+            Point2::new(400.0, 30.0),
+            Point2::new(380.0, 420.0),
+            Point2::new(-20.0, 390.0),
+            Point2::new(190.0, 210.0),
+        ];
+        let noise = [
+            (0.003, -0.002),
+            (-0.004, 0.001),
+            (0.002, 0.004),
+            (-0.001, -0.003),
+            (0.0, 0.002),
+        ];
+        let mut to: Vec<Point2> = from
+            .iter()
+            .zip(noise)
+            .map(|(p, (nx, ny))| {
+                let q = similar(*p, 0.8, 0.99993);
+                Point2::new(q.x + nx, q.y + ny)
+            })
+            .collect();
+        let clean = check_control(TransformKind::Helmert, &from, &to);
+        assert!(
+            clean.iter().all(|c| c.is_some_and(|c| !c.suspect())),
+            "{clean:?}"
+        );
+
+        to[2].x += 0.30;
+        let fit = fit_transform(TransformKind::Helmert, &from, &to).unwrap();
+        let m0 = fit.m0.unwrap();
+        assert!(
+            fit.residuals
+                .iter()
+                .all(|v| v.x.hypot(v.y) <= 3.0 * 2f64.sqrt() * m0),
+            "stary próg niczego nie oznacza"
+        );
+        let checks = check_control(TransformKind::Helmert, &from, &to);
+        let suspects: Vec<usize> = (0..5).filter(|&i| checks[i].unwrap().suspect()).collect();
+        assert_eq!(suspects, vec![2]);
+        assert!((checks[2].unwrap().misfit - 0.30).abs() < 0.02);
+
+        // Afiniczna z 5 punktami: bez punktu zostają 2 obserwacje nadliczbowe, więc kontrola jest
+        // (słaba); 3 punkty Helmerta: brak kontroli.
+        assert!(check_control(TransformKind::Affine, &from, &to)
+            .iter()
+            .all(|c| c.is_some()));
+        assert!(check_control(TransformKind::Helmert, &from[..3], &to[..3])
+            .iter()
+            .all(|c| c.is_none()));
     }
 }

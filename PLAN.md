@@ -205,9 +205,11 @@ Zrobione (22.11.2026):
 
 - konstrukcje (24.11.2026): przecięcie prostej z okręgiem, prosta równoległa (odsunięcie w lewo lub prawo) przecięta drugą prostą, podział odcinka na części lub co krok, spodek prostopadłej; numeracja wyników od pierwszego numeru (K1, K2, …).
 
-- transformacje płaskie (27.11.2026): Helmerta (przez podobieństwo) i afiniczna metodą najmniejszych kwadratów na środkach ciężkości, korekta Hausbrandta (odchyłki ważone 1/d², punkty dostosowania dostają współrzędne wtórne), odchyłki vX, vY, v w mm, m₀, skale i kąty obrotu, oznaczanie punktów odstających (v > 3·√2·m₀); współrzędne jednego z układów mogą pochodzić z projektu, wklejanie list, przeliczenie zaznaczonych lub wszystkich punktów projektu z przedrostkiem numerów.
+- transformacje płaskie (27.11.2026): Helmerta (przez podobieństwo) i afiniczna metodą najmniejszych kwadratów na środkach ciężkości, korekta Hausbrandta (odchyłki ważone 1/d², punkty dostosowania dostają współrzędne wtórne), odchyłki vX, vY, v w mm, m₀, skale i kąty obrotu, kontrola punktów testem „bez punktu” (studentyzowana odchyłka, F(2, r) na poziomie 1%, od 4 punktów Helmerta i 5 afinicznej; poprzedni próg v > 3·√2·m₀ nie mógł zadziałać poniżej 12 punktów), flaga „Użyj” wyłączająca punkt z dopasowania; współrzędne jednego z układów mogą pochodzić z projektu, wklejanie list, przeliczenie zaznaczonych lub wszystkich punktów projektu z przedrostkiem numerów.
 
-Następne w etapie 4a: wyrównanie pól i podział działek; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
+- podział działki i wyrównanie pól (27.11.2026): podział prostymi równoległymi do boku albo z wierzchołka (wachlarz) na części o zadanych polach ewidencyjnych lub równe, przeliczenie pól na układ współczynnikiem z pola działki, numeracja nowych punktów, ostrzeżenie przy działce wklęsłej; wyrównanie pól użytków lub części do pola działki proporcjonalnie, zaokrąglenie do 1, 0,1 albo 0,01 m² z zachowaniem sumy (metoda największych reszt), opcjonalna odchyłka dopuszczalna.
+
+Następne w etapie 4a: uśrednianie i porównanie zbiorów punktów; w tachimetrii średnia z dwóch położeń lunety i import z rejestratorów.
 
 ## Usługi mapowe
 
@@ -220,6 +222,17 @@ Zrobione (23.11.2026), katalog w `app/src/lib/services.ts`, wszystkie przez WMS 
 - sprawdzone zapytaniami GetMap dla strefy 6 i 7: wszystkie usługi zwracają obraz; podstawowa osnowa wysokościowa nie odpowiadała, więc jej nie ma; osnowa pozioma odpowiada bardzo wolno.
 
 Do zrobienia: przezroczystość nakładek, legenda (GetLegendGraphic), informacja o obiekcie (GetFeatureInfo), dowolna usługa po adresie URL, WMTS dla szybszych podkładów.
+
+## Eksport wyników (wątek na później)
+
+Dziś wyniki wychodzą tylko jako TXT (punkty, raport) i GML (plik źródłowy po edycji). Potrzebny eksport punktów, linii i poligonów z obliczeń (podziały, konstrukcje, pikiety) do formatów GIS i CAD:
+
+- Shapefile (SHP z DBF i PRJ, kodowanie atrybutów),
+- GeoPackage (GPKG),
+- CAD: DXF (warstwy, numery i wysokości punktów jako tekst),
+- GML (nowe obiekty, nie tylko zmiany pliku źródłowego).
+
+Zgłoszone przy przeglądzie łatwości obsługi (27.11.2026), poza jego zakresem.
 
 ## Obliczenia do uzupełnienia
 

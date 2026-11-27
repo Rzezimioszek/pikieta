@@ -5,7 +5,7 @@
   import type { Sketch } from '../map'
   import { addNewPoints, addReport, findPoint, nextId } from '../project.svelte'
   import PointField from './PointField.svelte'
-  import { assignIds, coords, fc, fl, num, pointState, reportTable } from './util'
+  import { coords, fc, fl, num, numberSeq, pointState, reportTable } from './util'
 
   interface Props {
     data: ConstructData
@@ -60,14 +60,7 @@
     }
   })
   const points = $derived(outcome && 'points' in outcome ? outcome.points : [])
-  /** Numery kolejnych punktów od pierwszego (K1 → K2, K3; 010 → 011), puste: kolejne wolne. */
-  function sequence(first: string, n: number): string[] {
-    const m = first.trim().match(/^(.*?)(\d+)$/)
-    if (!m) return assignIds(points.map((_, i) => (i === 0 ? first : '')))
-    const start = Number(m[2])
-    return Array.from({ length: n }, (_, i) => m[1] + String(start + i).padStart(m[2].length, '0'))
-  }
-  const ids = $derived(sequence(data.firstId, points.length))
+  const ids = $derived(numberSeq(data.firstId, points.length))
   const items = $derived(points.map((p, i) => ({ id: ids[i], p, ...pointState(ids[i], p) })))
   const fresh = $derived(items.filter((i) => i.tone === 'ok'))
 

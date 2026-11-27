@@ -44,7 +44,10 @@
       return { src, from: from.p, to: to.p, fromProject: from.fromProject, toProject: to.fromProject, status: '' }
     }),
   )
-  const used = $derived(ctrl.filter((c) => c.from && c.to) as { src: Ctrl; from: XY; to: XY; status: string }[])
+  type Valid = { src: Ctrl; from: XY; to: XY; status: string }
+  const valid = $derived(ctrl.filter((c) => c.from && c.to) as Valid[])
+  const used = $derived(valid.filter((c) => c.src.skip !== '1'))
+  const skipped = $derived(valid.filter((c) => c.src.skip === '1'))
 
   const rows = $derived(
     data.rows.map((src) => {
@@ -75,20 +78,44 @@
   const res = $derived(outcome && 'ok' in outcome ? outcome.ok : null)
   /** Odchyłka liniowa na punkcie dostosowania, w kolejności `used`. */
   const vLen = $derived(res ? res.residuals.map((v) => Math.hypot(v.x, v.y)) : [])
-  /** Próg odstawania: trzykrotny błąd średni położenia punktu. */
-  const limit = $derived(res?.m0 != null ? 3 * Math.SQRT2 * res.m0 : null)
+  type Check = { misfit: number; limit: number; suspect: boolean } | null
+  /** Kontrola punktu wyłączonego: ta sama statystyka co dla użytych, czyli z dopasowania bez niego,
+   *  a to jest właśnie dopasowanie z użytych punktów. */
+  const skippedChecks = $derived(
+    res
+      ? skipped.map((c): Check => {
+          try {
+            const r = planeTransform(data.method, [...used.map((u) => u.from), c.from], [...used.map((u) => u.to), c.to], [], false)
+            return r.checks.at(-1) ?? null
+          } catch {
+            return null
+          }
+        })
+      : [],
+  )
+  const MIN_CHECK = $derived(data.method === 'helmert' ? 4 : 5)
+  const noCheckText = $derived(
+    `Punktów nie da się sprawdzić: potrzeba co najmniej ${MIN_CHECK} punktów dostosowania (${data.method === 'helmert' ? 'Helmert' : 'afiniczna'}).`,
+  )
+  const CHECK_NOTE =
+    'Kontrola punktu: transformacja z pozostałych punktów przenosi go do układu wtórnego; odległość od jego współrzędnych wtórnych jest porównana z odchyłką dopuszczalną (test F na poziomie 1%, z błędu średniego bez tego punktu i jego położenia względem pozostałych).'
 
   const ctrlItems = $derived.by(() => {
     let k = 0
+    let s = 0
     return ctrl.map((c) => {
-      if (!('from' in c) || !c.from) return { ...c, v: undefined, vl: undefined }
-      const i = k++
-      const v = res?.residuals[i]
-      const vl = vLen[i]
-      const out = limit !== null && vl > limit
-      return { ...c, v, vl, status: out ? 'odstaje' : c.status, tone: out ? ('error' as const) : undefined }
+      if (!('from' in c) || !c.from) return { ...c, v: undefined, vl: undefined, check: undefined as Check | undefined, off: false }
+      const off = c.src.skip === '1'
+      const i = off ? -1 : k++
+      const check: Check | undefined = res ? (off ? skippedChecks[s++] : res.checks[i]) : undefined
+      const v = off ? undefined : res?.residuals[i]
+      const vl = off ? undefined : vLen[i]
+      const status = check?.suspect ? (off ? 'wyłączony · odstaje' : 'sprawdź') : off ? 'wyłączony' : res && check === null ? 'brak kontroli' : ''
+      const tone = check?.suspect && !off ? ('error' as const) : off || check === null ? ('muted' as const) : undefined
+      return { ...c, v, vl, check, off, status, tone }
     })
   })
+  const suspects = $derived(ctrlItems.filter((c) => c.check?.suspect && !c.off))
 
   const items = $derived.by(() => {
     let k = 0
@@ -123,8 +150,21 @@
     return p ? fc(p[axis]) : ''
   }
   const mm = (v: number | undefined) => (v === undefined ? '' : fmt(v * 1000, 1))
+  const checkText = (c: Check | undefined) => (c ? `${mm(c.misfit)} / ${mm(c.limit)}` : c === null ? '—' : '')
 
   const ctrlColumns: Column<(typeof ctrlItems)[number]>[] = [
+    {
+      key: 'use',
+      label: 'Użyj',
+      width: 50,
+      edit: 'check',
+      value: (i) => (i.src.skip === '1' ? '' : '1'),
+      set: (i, v) => {
+        if (v) delete i.src.skip
+        else i.src.skip = '1'
+      },
+      hidden: (i) => isBlank(i.src),
+    },
     { key: 'id', label: 'Nr', width: 80, edit: 'point', value: (i) => i.src.id, set: editCtrl('id') },
     { key: 'xs', label: 'x pierwotny', width: 110, align: 'right', edit: 'number', value: (i) => i.src.xs, set: editCtrl('xs'), placeholder: (i) => (i.src.xt.trim() ? hint(i.src.id, 'x') : '') },
     { key: 'ys', label: 'y pierwotny', width: 110, align: 'right', edit: 'number', value: (i) => i.src.ys, set: editCtrl('ys'), placeholder: (i) => (i.src.yt.trim() ? hint(i.src.id, 'y') : '') },
@@ -133,7 +173,8 @@
     { key: 'vx', label: 'vX [mm]', width: 80, align: 'right', value: (i) => mm(i.v?.x) },
     { key: 'vy', label: 'vY [mm]', width: 80, align: 'right', value: (i) => mm(i.v?.y) },
     { key: 'v', label: 'v [mm]', width: 80, align: 'right', value: (i) => mm(i.vl) },
-    { key: 'status', label: 'Stan', width: 120, value: (i) => i.status, tone: (i) => i.tone },
+    { key: 'chk', label: 'Bez punktu / dop. [mm]', width: 150, align: 'right', value: (i) => checkText(i.check), tone: (i) => (i.check?.suspect ? 'error' : undefined) },
+    { key: 'status', label: 'Stan', width: 130, value: (i) => i.status, tone: (i) => i.tone },
   ]
   const rowColumns: Column<(typeof items)[number]>[] = [
     { key: 'id', label: 'Nr', width: 80, edit: 'point', value: (i) => i.src.id, set: editRow('id') },
@@ -187,20 +228,24 @@
       params: [
         ['Metoda', METHODS[data.method]],
         ['Korekta Hausbrandta', hausbrandt ? 'tak' : 'nie'],
-        ['Punkty dostosowania', String(used.length)],
+        ['Punkty dostosowania', skipped.length ? `${used.length} (wyłączone: ${skipped.length})` : String(used.length)],
       ],
       table: reportTable(
-        ['Nr', 'x pierwotny', 'y pierwotny', 'X wtórny', 'Y wtórny', 'vX [mm]', 'vY [mm]', 'v [mm]'],
-        used.map((c, i) => [
-          c.src.id.trim(),
-          fc(c.from.x),
-          fc(c.from.y),
-          fc(c.to.x),
-          fc(c.to.y),
-          mm(r.residuals[i].x),
-          mm(r.residuals[i].y),
-          mm(vLen[i]),
-        ]),
+        ['Nr', 'x pierwotny', 'y pierwotny', 'X wtórny', 'Y wtórny', 'vX [mm]', 'vY [mm]', 'v [mm]', 'Bez punktu / dop. [mm]', 'Uwagi'],
+        ctrlItems
+          .filter((c) => c.from && c.to)
+          .map((c) => [
+            c.src.id.trim(),
+            fc(c.from!.x),
+            fc(c.from!.y),
+            fc(c.to!.x),
+            fc(c.to!.y),
+            mm(c.v?.x),
+            mm(c.v?.y),
+            mm(c.vl),
+            checkText(c.check),
+            c.status,
+          ]),
       ),
       results: [
         ...(r.m0 !== null ? [['Błąd średni transformacji m₀', `${fl(r.m0)} m`] as [string, string]] : []),
@@ -212,7 +257,10 @@
       ],
       notes: [
         ...(r.m0 === null ? ['Brak punktów nadliczbowych: odchyłki nie kontrolują transformacji.'] : []),
-        ...ctrlItems.filter((c) => c.status === 'odstaje').map((c) => `Punkt ${c.src.id.trim()} odstaje: v = ${mm(c.vl)} mm.`),
+        ...(r.checks.every((c) => c === null) ? [noCheckText] : []),
+        CHECK_NOTE,
+        ...suspects.map((c) => `Punkt ${c.src.id.trim()} do sprawdzenia: bez niego odstaje o ${mm(c.check!.misfit)} mm (dopuszczalnie ${mm(c.check!.limit)} mm).`),
+        ...ctrlItems.filter((c) => c.off).map((c) => `Punkt ${c.src.id.trim()} wyłączony z dopasowania.`),
       ],
     })
   }
@@ -239,6 +287,8 @@
   <h3>Punkty dostosowania</h3>
   <p class="hint">
     Te same punkty w obu układach. Puste współrzędne jednego z układów są brane z punktu projektu o tym numerze.
+    Każdy punkt jest sprawdzany transformacją z pozostałych: kolumna „Bez punktu” podaje, o ile wtedy odstaje,
+    obok odchyłka dopuszczalna. Odznacz „Użyj”, żeby wyłączyć punkt z dopasowania bez usuwania go z tabeli.
   </p>
   <DataTable
     columns={ctrlColumns}
@@ -264,12 +314,33 @@
   {#if outcome && 'error' in outcome}
     <p class="error" role="alert">{outcome.error}</p>
   {:else if res}
+    {#if suspects.length}
+      <div class="error" role="status">
+        {#each suspects as c (c.src)}
+          <p>
+            Sprawdź punkt {c.src.id.trim() || '(bez numeru)'}: transformacja z pozostałych punktów daje go o {mm(c.check!.misfit)} mm
+            od podanych współrzędnych wtórnych (dopuszczalnie {mm(c.check!.limit)} mm).
+          </p>
+        {/each}
+        <p>Popraw jego współrzędne albo odznacz „Użyj”, jeśli punkt jest uszkodzony lub przemieszczony.</p>
+      </div>
+    {/if}
     <dl class="card result">
       {#if res.m0 !== null}
         <dt>Błąd średni transformacji m₀</dt><dd>{fl(res.m0)} m</dd>
       {:else}
         <dt>Kontrola</dt><dd class="muted">brak punktów nadliczbowych</dd>
       {/if}
+      <dt>Kontrola punktów</dt>
+      <dd class:muted={!suspects.length}>
+        {#if res.checks.every((c) => c === null)}
+          brak: potrzeba co najmniej {MIN_CHECK} punktów
+        {:else if suspects.length}
+          do sprawdzenia: {suspects.length}
+        {:else}
+          bez uwag
+        {/if}
+      </dd>
       {#if data.method === 'helmert'}
         <dt>Skala</dt><dd>{fmt(res.scale.x, 8)} <span class="muted">· {fmt((res.scale.x - 1) * 1e6, 1)} mm/km</span></dd>
         <dt>Kąt obrotu</dt><dd>{fa(res.rotation.x)} g</dd>
@@ -318,6 +389,9 @@
   h3 {
     margin: 4px 0 0;
     font-size: 0.85rem;
+  }
+  div.error p {
+    margin: 0 0 4px;
   }
   details textarea {
     width: 100%;

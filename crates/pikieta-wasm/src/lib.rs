@@ -629,8 +629,9 @@ pub fn perpendicular_foot(coords: &[f64]) -> Option<Vec<f64>> {
 
 /// Transformacja płaska z punktów dostosowania (`from`, `to`: płaskie listy x, y) i przeliczenie
 /// punktów `points`. `kind`: 0 Helmert, 1 afiniczna. Zwraca `[m0, skala x, skala y, obrót x [g],
-/// obrót y [g], vx, vy…(na punktach dostosowania), x, y…(punkty przetransformowane)]`; m0 = NaN bez
-/// punktów nadliczbowych.
+/// obrót y [g], vx, vy…(na punktach dostosowania), d, dop…(kontrola bez punktu: odległość i odchyłka
+/// dopuszczalna; NaN, gdy punktu nie da się sprawdzić), x, y…(punkty przetransformowane)]`;
+/// m0 = NaN bez punktów nadliczbowych.
 #[wasm_bindgen]
 pub fn plane_transform(
     kind: u8,
@@ -644,8 +645,8 @@ pub fn plane_transform(
         _ => pikieta_calc::TransformKind::Affine,
     };
     let from = points_from_flat(from);
-    let fit = pikieta_calc::fit_transform(kind, &from, &points_from_flat(to))
-        .map_err(|e| JsError::new(&e))?;
+    let to = points_from_flat(to);
+    let fit = pikieta_calc::fit_transform(kind, &from, &to).map_err(|e| JsError::new(&e))?;
     let (sx, sy) = fit.transform.scales();
     let (rx, ry) = fit.transform.rotations();
     let mut out = vec![
@@ -656,10 +657,43 @@ pub fn plane_transform(
         rad_to_grad(ry),
     ];
     out.extend(flat_points(&fit.residuals));
+    for c in pikieta_calc::check_control(kind, &from, &to) {
+        out.extend(c.map_or([f64::NAN; 2], |c| [c.misfit, c.limit]));
+    }
     let moved: Vec<Point2> = points_from_flat(points)
         .into_iter()
         .map(|p| fit.apply(&from, p, hausbrandt))
         .collect();
     out.extend(flat_points(&moved));
     Ok(out)
+}
+
+/// Podział działki `poly` (płaska lista x, y) na części o polach `parts` [m² w układzie]:
+/// prostymi równoległymi do prostej `[xa, ya, xb, yb]` (`dir`), a gdy `dir` puste, z wierzchołka
+/// `start`. Zwraca JSON `{cuts: [[[x, y], …], …], areas: […], outside}`.
+#[wasm_bindgen]
+pub fn divide_parcel(
+    poly: &[f64],
+    dir: &[f64],
+    start: usize,
+    parts: &[f64],
+) -> Result<String, JsError> {
+    let poly = points_from_flat(poly);
+    let r = match points_from_flat(dir).as_slice() {
+        [a, b] => pikieta_calc::divide_parallel(&poly, *a, *b, parts),
+        _ => pikieta_calc::divide_from_point(&poly, start, parts),
+    }
+    .map_err(|e| JsError::new(&e))?;
+    Ok(serde_json::json!({
+        "cuts": r.cuts.iter().map(|c| c.iter().map(|p| [p.x, p.y]).collect::<Vec<_>>()).collect::<Vec<_>>(),
+        "areas": r.areas,
+        "outside": r.outside,
+    })
+    .to_string())
+}
+
+/// Rozrzucenie odchyłki pola na części, z zaokrągleniem do `unit` i zachowaniem sumy.
+#[wasm_bindgen]
+pub fn distribute_area(total: f64, parts: &[f64], unit: f64) -> Result<Vec<f64>, JsError> {
+    pikieta_calc::distribute_area(total, parts, unit).map_err(|e| JsError::new(&e))
 }

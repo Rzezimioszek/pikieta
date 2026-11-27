@@ -43,6 +43,15 @@ export function assignIds(explicit: string[]): string[] {
   })
 }
 
+/** Numery kolejnych `n` punktów od pierwszego (K1 → K2, K3; 010 → 011); bez cyfr na końcu albo
+ *  pusty: pierwszy jak wpisany, reszta kolejne wolne. */
+export function numberSeq(first: string, n: number): string[] {
+  const m = first.trim().match(/^(.*?)(\d+)$/)
+  if (!m) return assignIds(Array.from({ length: n }, (_, i) => (i === 0 ? first : '')))
+  const start = Number(m[2])
+  return Array.from({ length: n }, (_, i) => m[1] + String(start + i).padStart(m[2].length, '0'))
+}
+
 /** Stan punktu wynikowego względem projektu. */
 export function pointState(id: string, p: XY): { status: string; tone: 'ok' | 'muted' | 'error' } {
   const existing = findPoint(id)
