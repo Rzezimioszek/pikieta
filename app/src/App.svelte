@@ -6,6 +6,7 @@
   import GmlTable from './lib/GmlTable.svelte'
   import PointTable from './lib/PointTable.svelte'
   import Ribbon from './lib/Ribbon.svelte'
+  import TaskPicker from './lib/TaskPicker.svelte'
   import ToolPanel from './lib/ToolPanel.svelte'
   import ViewSwitch from './lib/ViewSwitch.svelte'
   import { coreReady, epsgOf, toGeodetic, transformXY, type XY } from './lib/core'
@@ -26,6 +27,7 @@
     addPoints,
     env,
     nextId,
+    openTaskPicker,
     picker,
     project,
     saveProject,
@@ -206,6 +208,9 @@
       if (ctrl && e.key.toLowerCase() === 's') {
         e.preventDefault()
         saveProjectFile()
+      } else if (ctrl && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        openTaskPicker()
       } else if (ctrl && e.key.toLowerCase() === 'o') {
         e.preventDefault()
         openProjectFile().then((pts) => pts?.length && zoomTo(pts))
@@ -235,6 +240,8 @@
 </datalist>
 
 <a class="skip-link" href="#workspace">Przejdź do obszaru roboczego</a>
+
+<TaskPicker />
 
 <div class="app">
   <Ribbon {crsLabel} onzoom={zoomTo} onchangecrs={changeCrs} />

@@ -164,8 +164,6 @@ export interface TraverseData {
 
 export interface CalcInfo {
   label: string
-  /** Krótka nazwa na przycisk wstążki. */
-  short: string
   icon: IconName
   hint: string
   init: () => object
@@ -178,7 +176,6 @@ const filled = (...v: string[]) => v.every((s) => s.trim() !== '')
 export const CALCS: Record<CalcType, CalcInfo> = {
   azimuth: {
     label: 'Azymut i długość',
-    short: 'Azymut',
     icon: 'azimuth',
     hint: 'Azymuty i długości odcinków, z redukcją na elipsoidę.',
     init: (): AzimuthData => ({ rows: [{ from: '', to: '' }] }),
@@ -191,7 +188,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   polar: {
     label: 'Metoda biegunowa',
-    short: 'Biegunowa',
     icon: 'polar',
     hint: 'Nowe punkty ze stanowiska po kącie od nawiązania i długości.',
     init: (): PolarData => ({ station: '', ref: '', rows: [{ id: '', angle: '', dist: '' }] }),
@@ -199,7 +195,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   offset: {
     label: 'Rzutowanie na linię',
-    short: 'Rzutowanie',
     icon: 'offset',
     hint: 'Miary bieżące i domiary istniejących punktów względem linii.',
     init: (): OffsetData => ({ a: '', b: '', rows: [{ id: '' }] }),
@@ -207,7 +202,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   fromOffset: {
     label: 'Punkty z domiarów',
-    short: 'Z domiarów',
     icon: 'fromOffset',
     hint: 'Nowe punkty z miar bieżących i domiarów względem linii.',
     init: (): FromOffsetData => ({ a: '', b: '', rows: [{ id: '', along: '', offset: '' }] }),
@@ -215,7 +209,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   distInt: {
     label: 'Wcięcie liniowe',
-    short: 'Liniowe',
     icon: 'distInt',
     hint: 'Punkt z długości od dwóch punktów znanych.',
     init: (): DistIntData => ({ a: '', b: '', ra: '', rb: '', side: 'left', id: '' }),
@@ -223,7 +216,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   lineInt: {
     label: 'Przecięcie prostych',
-    short: 'Przecięcie',
     icon: 'lineInt',
     hint: 'Punkt przecięcia dwóch prostych zadanych parami punktów.',
     init: (): LineIntData => ({ a: '', b: '', c: '', d: '', id: '' }),
@@ -234,7 +226,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   construct: {
     label: 'Konstrukcje',
-    short: 'Konstrukcje',
     icon: 'construct',
     hint: 'Przecięcie prostej z okręgiem, prosta równoległa, podział odcinka, spodek prostopadłej.',
     init: (): ConstructData => ({
@@ -255,7 +246,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   areaAdjust: {
     label: 'Wyrównanie pól',
-    short: 'Wyrównanie pól',
     icon: 'areaAdjust',
     hint: 'Rozrzucenie odchyłki między polem działki a sumą pól użytków lub części.',
     init: (): AreaAdjustData => ({ total: '', unit: '1', limit: '', rows: [{ name: '', area: '' }] }),
@@ -263,7 +253,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   division: {
     label: 'Podział działki',
-    short: 'Podział',
     icon: 'division',
     hint: 'Podział na części o zadanych polach albo równe: równolegle do boku lub z punktu.',
     init: (): DivisionData => ({
@@ -284,7 +273,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   transform: {
     label: 'Transformacja płaska',
-    short: 'Transformacja',
     icon: 'transform',
     hint: 'Helmerta albo afiniczna z punktów dostosowania, z korektą Hausbrandta i raportem odchyłek.',
     init: (): TransformData => ({
@@ -302,7 +290,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   combinedInt: {
     label: 'Wcięcie z wyrównaniem',
-    short: 'Kombinowane',
     icon: 'combinedInt',
     hint: 'Punkt z dowolnych kątów i długości do punktów znanych, z wyrównaniem przy obserwacjach nadliczbowych.',
     init: (): CombinedIntData => ({
@@ -319,7 +306,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   angleInt: {
     label: 'Wcięcie kątowe w przód',
-    short: 'Kątowe',
     icon: 'angleInt',
     hint: 'Punkt z kątów pomierzonych na dwóch punktach znanych (kąty wewnętrzne trójkąta).',
     init: (): AngleIntData => ({ a: '', b: '', alpha: '', beta: '', side: 'left', id: '' }),
@@ -328,7 +314,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   resection: {
     label: 'Wcięcie wstecz',
-    short: 'Wstecz',
     icon: 'resection',
     hint: 'Stanowisko z kierunków na co najmniej trzy punkty znane; przy większej liczbie z wyrównaniem.',
     init: (): ResectionData => ({ id: '', rows: [{ id: '', hz: '' }] }),
@@ -339,7 +324,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   stakeout: {
     label: 'Tyczenie',
-    short: 'Tyczenie',
     icon: 'stakeout',
     hint: 'Elementy tyczenia biegunowego: odczyt koła, kąt od nawiązania i długość do odmierzenia.',
     init: (): StakeoutData => ({ station: '', ref: '', refReading: '', reduce: 'no', rows: [{ id: '' }] }),
@@ -347,7 +331,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   tachy: {
     label: 'Tachimetria',
-    short: 'Tachimetria',
     icon: 'tachy',
     hint: 'Orientacja stanowiska na nawiązania i pikiety z kierunku, kąta zenitalnego i odległości skośnej.',
     init: (): TachyData => ({
@@ -363,7 +346,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   traverse: {
     label: 'Ciąg poligonowy',
-    short: 'Ciąg',
     icon: 'traverse',
     hint: 'Ciąg dwustronnie nawiązany, zamknięty lub wiszący z wyrównaniem przybliżonym.',
     init: (): TraverseData => ({
@@ -383,7 +365,6 @@ export const CALCS: Record<CalcType, CalcInfo> = {
   },
   area: {
     label: 'Pole powierzchni',
-    short: 'Pole',
     icon: 'area',
     hint: 'Pole i obwód wieloboku ze współrzędnych wierzchołków.',
     init: (): AreaData => ({ rows: [{ id: '' }] }),

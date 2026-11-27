@@ -133,6 +133,24 @@ export const selection = new SvelteSet<string>()
 /** Pole czekające na wskazanie punktu kliknięciem na mapie. */
 export const picker = $state<{ fill: ((id: string) => void) | null; label: string }>({ fill: null, label: '' })
 
+/** Wspólne okno wyboru zadania: otwierają je wstążka, „Nowe obliczenie” i Ctrl+K. `group` zawęża
+ *  listę do jednej grupy zadań (pusta: wszystkie). */
+export const taskPicker = $state({ open: false, group: '' })
+export function openTaskPicker(group = '') {
+  taskPicker.group = group
+  taskPicker.open = true
+}
+
+/** Ostatnio używane rodzaje zadań, od najnowszego. */
+export function recentTypes(n: number): CalcType[] {
+  const seen = new Set<CalcType>()
+  for (const s of [...project.calcs].sort((a, b) => b.updated - a.updated)) {
+    seen.add(s.type)
+    if (seen.size === n) break
+  }
+  return [...seen]
+}
+
 // --- Komunikaty ---
 
 export interface Toast {
@@ -255,7 +273,15 @@ function show(doc: ActiveDoc) {
 
 export function startCalc(type: CalcType) {
   const now = Date.now()
-  project.calcs.unshift({ id: newId(), type, name: null, open: true, created: now, updated: now, data: CALCS[type].init() })
+  project.calcs.unshift({
+    id: newId(),
+    type,
+    name: null,
+    open: true,
+    created: now,
+    updated: now,
+    data: CALCS[type].init(),
+  })
   const old = project.calcs.filter((s) => !s.open).slice(MAX_CALCS)
   if (old.length) project.calcs = project.calcs.filter((s) => !old.includes(s))
   show({ kind: 'calc', id: project.calcs[0].id })

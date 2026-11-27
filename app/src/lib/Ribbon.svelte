@@ -18,7 +18,9 @@
   import { grouped } from './services'
   import {
     notify,
+    openTaskPicker,
     project,
+    recentTypes,
     selection,
     showReport,
     startCalc,
@@ -35,6 +37,8 @@
     onchangecrs: (code: string) => void
   }
   let { crsLabel, onzoom, onchangecrs }: Props = $props()
+
+  const recent = $derived(recentTypes(4))
 
   const TABS: [RibbonTab, string][] = [
     ['project', 'Projekt'],
@@ -208,16 +212,32 @@
           <span class="cap">Dokładność wyników (zaokrąglanie do parzystej)</span>
         </div>
       {:else if ui.ribbonTab === 'calc'}
-        {#each CALC_GROUPS as g (g.label)}
+        <div class="group">
+          <div class="btns">
+            {@render big('plus', 'Nowe obliczenie', () => openTaskPicker(), { title: 'Okno wyboru zadania (Ctrl+K)' })}
+          </div>
+          <span class="cap">Wszystkie zadania</span>
+        </div>
+        <div class="group">
+          <div class="btns">
+            {#each CALC_GROUPS as g (g.label)}
+              {@render big(CALCS[g.types[0]].icon, g.label, () => openTaskPicker(g.label), {
+                title: `${g.label}: ${g.types.map((t) => CALCS[t].label).join(', ')}`,
+              })}
+            {/each}
+          </div>
+          <span class="cap">Grupy zadań</span>
+        </div>
+        {#if recent.length}
           <div class="group">
             <div class="btns">
-              {#each g.types as t (t)}
-                {@render big(CALCS[t].icon, CALCS[t].short, () => startCalc(t), { title: `${CALCS[t].label}: ${CALCS[t].hint}` })}
+              {#each recent as t (t)}
+                {@render big(CALCS[t].icon, CALCS[t].label, () => startCalc(t), { title: `Nowe: ${CALCS[t].label}. ${CALCS[t].hint}` })}
               {/each}
             </div>
-            <span class="cap">{g.label}</span>
+            <span class="cap">Ostatnio używane</span>
           </div>
-        {/each}
+        {/if}
       {:else if ui.ribbonTab === 'map'}
         <div class="group">
           <div class="btns">
@@ -394,6 +414,11 @@
     background: transparent;
     font-size: 0.74rem;
     font-weight: 550;
+  }
+  .big span {
+    max-width: 92px;
+    line-height: 1.15;
+    text-align: center;
   }
   .big :global(svg) {
     color: var(--accent);

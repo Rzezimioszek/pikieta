@@ -223,6 +223,17 @@ Zrobione (23.11.2026), katalog w `app/src/lib/services.ts`, wszystkie przez WMS 
 
 Do zrobienia: przezroczystość nakładek, legenda (GetLegendGraphic), informacja o obiekcie (GetFeatureInfo), dowolna usługa po adresie URL, WMTS dla szybszych podkładów.
 
+## Łatwość obsługi
+
+Na podstawie przeglądu w `concepts_brief.md` (27.11.2026). Cel: nowa osoba bez pomocy liczy tachimetrię do raportu z rysunkiem i transformację.
+
+Zrobione:
+
+- kontrola punktów w transformacji testem „bez punktu” i flaga „Użyj” (27.11.2026);
+- jedno okno wyboru zadania (27.11.2026). Otwierają je przycisk „Nowe obliczenie”, karta „Obliczenia” na wstążce (całe okno, okno zawężone do grupy albo jedno z czterech ostatnio używanych zadań jednym kliknięciem) i Ctrl+K. Okno ma wyszukiwanie po nazwie, opisie, grupie i słowach kluczowych bez polskich znaków, zawsze widoczne opisy, Enter otwiera pierwsze trafienie, a na telefonie zajmuje cały ekran. Usunięte zostały lista rozwijana w panelu obliczeń, osobny launcher w pustym panelu zadania i krótkie nazwy przycisków.
+
+Następne według briefu: jedna historia i słownik pojęć, pasek startowy w pustym projekcie, podgląd importu z wykrywaniem X/Y, rozdzielona zmiana układu, „Zapisz wynik”, wklejanie obserwacji w tachimetrii, rysunek w raporcie, panel warstw.
+
 ## Eksport wyników (wątek na później)
 
 Dziś wyniki wychodzą tylko jako TXT (punkty, raport) i GML (plik źródłowy po edycji). Potrzebny eksport punktów, linii i poligonów z obliczeń (podziały, konstrukcje, pikiety) do formatów GIS i CAD:

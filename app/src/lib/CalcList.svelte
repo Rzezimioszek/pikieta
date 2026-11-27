@@ -1,15 +1,14 @@
 <script lang="ts">
   import Icon from './Icon.svelte'
-  import Launcher from './Launcher.svelte'
   import { CALCS, calcTitle } from './calcs'
   import { gml, persistLayer } from './gml.svelte'
   import {
     closeCalc,
     deleteCalc,
     openCalc,
+    openTaskPicker,
     project,
     showReport,
-    startCalc,
     ui,
     type CalcSession,
   } from './project.svelte'
@@ -17,7 +16,6 @@
   let { coreVersion }: { coreVersion: string } = $props()
 
   let query = $state('')
-  let menu = $state(false)
   let renaming = $state<string | null>(null)
   let nameDraft = $state('')
 
@@ -111,23 +109,9 @@
 {/snippet}
 
 <aside class="sidebar surface" aria-label="Lista obliczeń i warstw">
-  <div class="new">
-    <button class="primary" onclick={() => (menu = !menu)} aria-expanded={menu}>
-      <Icon name="plus" /> Nowe obliczenie
-    </button>
-    {#if menu}
-      <button class="backdrop" aria-label="Zamknij menu" onclick={() => (menu = false)}></button>
-      <div class="menu surface">
-        <Launcher
-          compact
-          onpick={(t) => {
-            menu = false
-            startCalc(t)
-          }}
-        />
-      </div>
-    {/if}
-  </div>
+  <button class="primary new" onclick={() => openTaskPicker()} title="Wybierz zadanie (Ctrl+K)" aria-haspopup="dialog">
+    <Icon name="plus" /> Nowe obliczenie
+  </button>
 
   <label class="search">
     <Icon name="search" size={16} />
@@ -148,7 +132,7 @@
       </ul>
     {/each}
     {#if project.calcs.length === 0}
-      <p class="hint pad">Tu pojawią się otwarte i ostatnio używane obliczenia. Zacznij od „Nowe obliczenie” albo wstążki u góry.</p>
+      <p class="hint pad">Tu pojawią się otwarte i ostatnio używane obliczenia. Zacznij od „Nowe obliczenie” (Ctrl+K).</p>
     {:else if matching.length === 0}
       <p class="hint pad">Nic nie pasuje do „{query}”.</p>
     {/if}
@@ -206,34 +190,11 @@
     padding: 12px;
   }
   .new {
-    position: relative;
-  }
-  .new > .primary {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     width: 100%;
-  }
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    cursor: default;
-  }
-  .menu {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    z-index: 21;
-    width: 280px;
-    max-height: 70vh;
-    overflow: auto;
-    padding: 10px;
-    background: var(--menu-bg);
   }
   .search {
     display: flex;
