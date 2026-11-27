@@ -28,7 +28,6 @@
     ui,
     type Precision,
     type RibbonTab,
-    type ViewMode,
   } from './project.svelte'
   import type { XY } from './core'
 
@@ -56,13 +55,6 @@
     ['project', 'Projekt'],
     ['calc', 'Obliczenia'],
     ['map', 'Mapa'],
-    ['view', 'Widok'],
-  ]
-
-  const VIEWS: [ViewMode, IconName, string][] = [
-    ['map', 'map', 'Mapa'],
-    ['split', 'split', 'Podział'],
-    ['calc', 'panel', 'Obliczenia'],
   ]
 
   function pickTab(t: RibbonTab) {
@@ -124,7 +116,7 @@
 
 <header class="ribbon surface" class:collapsed={ui.ribbonCollapsed}>
   <div class="strip">
-    <button class="burger" title="Lista obliczeń" aria-pressed={ui.sidebar} onclick={() => (ui.sidebar = !ui.sidebar)}>
+    <button class="burger" title="Historia obliczeń" aria-label="Historia obliczeń" aria-pressed={ui.sidebar} onclick={() => (ui.sidebar = !ui.sidebar)}>
       <Icon name="menu" />
     </button>
     <h1 class="brand">Pikieta</h1>
@@ -165,9 +157,9 @@
         </div>
         <div class="group">
           <div class="btns">
-            {@render big('upload', 'Importuj', doImport, { title: 'Importuj wykaz współrzędnych (TXT)' })}
-            {@render big('download', 'Eksportuj', exportPoints, {
-              title: 'Eksportuj wykaz współrzędnych (TXT)',
+            {@render big('upload', 'Wczytaj', doImport, { title: 'Wczytaj wykaz współrzędnych (TXT) z podglądem' })}
+            {@render big('download', 'Zapisz', exportPoints, {
+              title: 'Zapisz wykaz współrzędnych (TXT)',
               disabled: project.points.length === 0,
             })}
             <label class="stack">
@@ -178,12 +170,12 @@
               </select>
             </label>
           </div>
-          <span class="cap">Punkty</span>
+          <span class="cap">Wykaz współrzędnych</span>
         </div>
         <div class="group">
           <div class="btns">
-            {@render big('layers', 'Wczytaj', doImportGml, { title: 'Wczytaj plik GML (np. EGiB) jako warstwę' })}
-            {@render big('download', 'Punkty', exportPointsGml, {
+            {@render big('layers', 'Wczytaj warstwę', doImportGml, { title: 'Wczytaj plik GML (np. EGiB) jako warstwę' })}
+            {@render big('download', 'Punkty do GML', exportPointsGml, {
               title: 'Zapisz punkty projektu jako GML 3.2',
               disabled: project.points.length === 0,
             })}
@@ -221,7 +213,7 @@
               </label>
             {/each}
           </div>
-          <span class="cap">Dokładność wyników (zaokrąglanie do parzystej)</span>
+          <span class="cap">Miejsca po przecinku (zaokrąglanie do parzystej)</span>
         </div>
       {:else if ui.ribbonTab === 'calc'}
         <div class="group">
@@ -294,25 +286,6 @@
             })}
           </div>
           <span class="cap">Punkty</span>
-        </div>
-      {:else}
-        <div class="group">
-          <div class="btns">
-            {#each VIEWS as [mode, icon, label] (mode)}
-              {@render big(icon, label, () => (ui.view = mode), { on: ui.view === mode })}
-            {/each}
-          </div>
-          <span class="cap">Tryb widoku</span>
-        </div>
-        <div class="group">
-          <div class="btns">
-            {@render big('sidebar', 'Obliczenia', () => (ui.sidebar = !ui.sidebar), {
-              on: ui.sidebar,
-              title: 'Lista otwartych i ostatnich obliczeń',
-            })}
-            {@render big('table', 'Tabela', () => (ui.table = !ui.table), { on: ui.table, title: 'Tabela punktów' })}
-          </div>
-          <span class="cap">Panele</span>
         </div>
       {/if}
     </div>

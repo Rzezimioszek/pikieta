@@ -103,7 +103,7 @@
 
 <section class="tool surface" aria-labelledby="tool-heading">
   <h2 id="tool-heading" class="sr-only">
-    {session ? calcTitle(session) : ui.active?.kind === 'report' ? 'Raport obliczeń' : gmlLayer ? gmlLayer.name : 'Obliczenia'}
+    {session ? calcTitle(session) : ui.active?.kind === 'report' ? 'Raport obliczeń' : gmlLayer ? gmlLayer.name : 'Nowe obliczenie'}
   </h2>
   <header>
     {#if session}
@@ -150,7 +150,7 @@
     {:else}
       <span class="ic"><Icon name="panel" size={20} /></span>
       <div class="titles">
-        <strong class="title">Obliczenia</strong>
+        <strong class="title">Nowe obliczenie</strong>
         <span class="sub">Nie ma otwartego obliczenia</span>
       </div>
     {/if}
@@ -180,8 +180,8 @@
     {:else}
       <div class="start">
         <p>
-          Nowe obliczenie zaczyna się od wyboru zadania. To samo okno wyboru otwierają przycisk „Nowe obliczenie” na
-          liście obliczeń, karta „Obliczenia” na wstążce i skrót Ctrl+K.
+          Nowe obliczenie zaczyna się od wyboru zadania. To samo okno wyboru otwierają przycisk „Nowe obliczenie” nad
+          historią obliczeń, karta „Obliczenia” na wstążce i skrót Ctrl+K.
         </p>
         <button class="primary" onclick={() => openTaskPicker()} aria-haspopup="dialog">
           <Icon name="plus" /> Wybierz zadanie

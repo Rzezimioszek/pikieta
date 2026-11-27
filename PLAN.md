@@ -246,7 +246,28 @@ Zrobione:
   - lista układów wraca do obecnego, dopóki nie zapadnie decyzja;
   - komunikat po zmianie.
 
-Następne według briefu: jedna historia i słownik pojęć, pasek startowy w pustym projekcie, „Zapisz wynik”, wklejanie obserwacji w tachimetrii, rysunek w raporcie, panel warstw.
+- jedna historia obliczeń i słownik pojęć (27.11.2026):
+  - zamiast osobnych „Otwartych” i historii jest jedna lista od najnowszego, w grupach według daty, z zaznaczonym bieżącym obliczeniem;
+  - zamknięcie obliczenia zostawia pusty panel;
+  - zmiana nazwy i usunięcie są widoczne zawsze na ekranach dotykowych;
+  - usunięta karta „Widok”, bo dublowała przełącznik widoku, przycisk historii i przycisk tabeli;
+  - nazwy według słownika poniżej.
+
+Słownik pojęć interfejsu (te słowa i tylko w tym znaczeniu):
+
+| Pojęcie | Znaczenie |
+|---|---|
+| Zadanie | rodzaj obliczenia (np. Tachimetria), wybierany w oknie „Nowe obliczenie” |
+| Obliczenie | jedno użycie zadania z danymi; ma nazwę i jest w historii |
+| Historia obliczeń | lista obliczeń po lewej, otwierana przyciskiem ☰ |
+| Raport | wyniki zapisane do wydruku i pliku |
+| Wykaz współrzędnych | plik TXT z punktami: „Wczytaj” i „Zapisz” |
+| Warstwa GML | plik GML na mapie: „Wczytaj warstwę” |
+| Układ współrzędnych | układ projektu; zmiana z przeliczeniem albo bez |
+| Widok | „Mapa”, „Mapa i obliczenie obok siebie”, „Obliczenie na pełnym ekranie” |
+| Miejsca po przecinku | dokładność wyświetlania wyników, nie dokładność pomiaru |
+
+Następne według briefu: pasek startowy w pustym projekcie, „Zapisz wynik”, wklejanie obserwacji w tachimetrii, rysunek w raporcie, panel warstw.
 
 ## Eksport wyników (wątek na później)
 

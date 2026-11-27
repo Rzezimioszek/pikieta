@@ -3,7 +3,6 @@
   import { CALCS, calcTitle } from './calcs'
   import { gml, persistLayer } from './gml.svelte'
   import {
-    closeCalc,
     deleteCalc,
     openCalc,
     openTaskPicker,
@@ -28,7 +27,7 @@
       .sort((a, b) => b.updated - a.updated)
       .filter((s) => q === '' || calcTitle(s).toLowerCase().includes(q) || CALCS[s.type].label.toLowerCase().includes(q))
   })
-  const open = $derived(matching.filter((s) => s.open))
+  /** Jedna lista od najnowszego, w grupach według daty ostatniej zmiany. */
   const history = $derived.by(() => {
     const today = startOfToday()
     const groups: [string, CalcSession[]][] = [
@@ -37,7 +36,7 @@
       ['Ostatnie 7 dni', []],
       ['Starsze', []],
     ]
-    for (const s of matching.filter((s) => !s.open)) {
+    for (const s of matching) {
       const g = s.updated >= today ? 0 : s.updated >= today - DAY ? 1 : s.updated >= today - 7 * DAY ? 2 : 3
       groups[g][1].push(s)
     }
@@ -89,7 +88,7 @@
         }}
       />
     {:else}
-      <button class="open" onclick={() => openCalc(s.id)} ondblclick={() => startRename(s)}>
+      <button class="open" aria-current={isActive(s) ? 'true' : undefined} onclick={() => openCalc(s.id)} ondblclick={() => startRename(s)}>
         <span class="ic"><Icon name={CALCS[s.type].icon} size={16} /></span>
         <span class="txt">
           <span class="t">{calcTitle(s)}</span>
@@ -97,34 +96,28 @@
         </span>
       </button>
       <span class="acts">
-        <button class="mini" title="Zmień nazwę" onclick={() => startRename(s)}><Icon name="pencil" size={14} /></button>
-        {#if s.open}
-          <button class="mini" title="Zamknij (zostaje w historii)" onclick={() => closeCalc(s.id)}><Icon name="x" size={14} /></button>
-        {:else}
-          <button class="mini" title="Usuń z historii" onclick={() => remove(s)}><Icon name="trash" size={14} /></button>
-        {/if}
+        <button class="mini" title="Zmień nazwę" aria-label={`Zmień nazwę: ${calcTitle(s)}`} onclick={() => startRename(s)}>
+          <Icon name="pencil" size={14} />
+        </button>
+        <button class="mini" title="Usuń z historii" aria-label={`Usuń z historii: ${calcTitle(s)}`} onclick={() => remove(s)}>
+          <Icon name="trash" size={14} />
+        </button>
       </span>
     {/if}
   </li>
 {/snippet}
 
-<aside class="sidebar surface" aria-label="Lista obliczeń i warstw">
+<aside class="sidebar surface" aria-label="Historia obliczeń i warstwy">
   <button class="primary new" onclick={() => openTaskPicker()} title="Wybierz zadanie (Ctrl+K)" aria-haspopup="dialog">
     <Icon name="plus" /> Nowe obliczenie
   </button>
 
   <label class="search">
     <Icon name="search" size={16} />
-    <input placeholder="Szukaj obliczeń" aria-label="Szukaj obliczeń" bind:value={query} />
+    <input placeholder="Szukaj w historii" aria-label="Szukaj w historii obliczeń" bind:value={query} />
   </label>
 
-  <nav aria-label="Obliczenia">
-    {#if open.length}
-      <h2>Otwarte</h2>
-      <ul>
-        {#each open as s (s.id)}{@render item(s)}{/each}
-      </ul>
-    {/if}
+  <nav aria-label="Historia obliczeń">
     {#each history as [label, list] (label)}
       <h2>{label}</h2>
       <ul>
@@ -132,7 +125,7 @@
       </ul>
     {/each}
     {#if project.calcs.length === 0}
-      <p class="hint pad">Tu pojawią się otwarte i ostatnio używane obliczenia. Zacznij od „Nowe obliczenie” (Ctrl+K).</p>
+      <p class="hint pad">Tu pojawi się historia obliczeń. Zacznij od „Nowe obliczenie” (Ctrl+K).</p>
     {:else if matching.length === 0}
       <p class="hint pad">Nic nie pasuje do „{query}”.</p>
     {/if}
@@ -299,6 +292,12 @@
   .row:hover .acts,
   .row:focus-within .acts {
     display: flex;
+  }
+  /* Ekrany dotykowe nie mają najechania: przyciski muszą być widoczne zawsze. */
+  @media (hover: none) {
+    .acts {
+      display: flex;
+    }
   }
   .mini {
     display: grid;

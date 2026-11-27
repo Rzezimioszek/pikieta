@@ -254,7 +254,7 @@
 
   <div class="main" class:with-sidebar={ui.sidebar}>
     {#if ui.sidebar}
-      {#if env.narrow}<button class="scrim" aria-label="Zamknij listę" onclick={() => (ui.sidebar = false)}></button>{/if}
+      {#if env.narrow}<button class="scrim" aria-label="Zamknij historię obliczeń" onclick={() => (ui.sidebar = false)}></button>{/if}
       <CalcList {coreVersion} />
     {/if}
 

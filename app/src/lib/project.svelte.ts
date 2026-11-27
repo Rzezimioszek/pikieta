@@ -45,7 +45,7 @@ export interface Saved {
 }
 
 export type ViewMode = 'map' | 'split' | 'calc'
-export type RibbonTab = 'project' | 'calc' | 'map' | 'view'
+export type RibbonTab = 'project' | 'calc' | 'map'
 export type ActiveDoc = { kind: 'calc'; id: string } | { kind: 'report' } | { kind: 'gml'; id: string } | null
 
 interface Ui {
@@ -116,6 +116,9 @@ const UI_DEFAULTS: Ui = {
   tableTab: 'points',
 }
 export const ui = $state<Ui>({ ...UI_DEFAULTS, ...read<Ui>(UI_KEY), addByClick: false })
+// Ustawienia zapisane przez starszą wersję mogą wskazywać kartę albo widok, których już nie ma.
+if (!['project', 'calc', 'map'].includes(ui.ribbonTab)) ui.ribbonTab = UI_DEFAULTS.ribbonTab
+if (!['map', 'split', 'calc'].includes(ui.view)) ui.view = UI_DEFAULTS.view
 if (ui.active?.kind === 'calc' && !project.calcs.some((s) => s.id === (ui.active as { id: string }).id)) {
   ui.active = null
 }
@@ -294,11 +297,9 @@ export function openCalc(id: string) {
   show({ kind: 'calc', id })
 }
 
-/** Po zamknięciu aktywnego dokumentu pokazuje ostatnio używane otwarte obliczenie. */
+/** Zamknięcie aktywnego obliczenia zostawia pusty panel; inne obliczenia otwiera się z historii. */
 function activateNext(closed: string) {
-  if (ui.active?.kind !== 'calc' || ui.active.id !== closed) return
-  const next = project.calcs.filter((s) => s.open && s.id !== closed).sort((a, b) => b.updated - a.updated)[0]
-  ui.active = next ? { kind: 'calc', id: next.id } : null
+  if (ui.active?.kind === 'calc' && ui.active.id === closed) ui.active = null
 }
 
 export function closeCalc(id: string) {

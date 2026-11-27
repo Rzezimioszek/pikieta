@@ -5,9 +5,9 @@
   import type { IconName } from './icons'
 
   const MODES: [ViewMode, IconName, string][] = [
-    ['map', 'map', 'Mapa z panelem narzędzia'],
-    ['split', 'split', 'Podział 50/50'],
-    ['calc', 'panel', 'Obliczenia na pełnym ekranie'],
+    ['map', 'map', 'Mapa'],
+    ['split', 'split', 'Mapa i obliczenie obok siebie'],
+    ['calc', 'panel', 'Obliczenie na pełnym ekranie'],
   ]
 </script>
 
